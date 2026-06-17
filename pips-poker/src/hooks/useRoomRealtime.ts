@@ -23,6 +23,7 @@ export interface RoomPlayer {
   display_name: string;
   seat: number;
   chip_stack: number;
+  buy_in: number;
   is_active: boolean;
   is_away: boolean;
 }

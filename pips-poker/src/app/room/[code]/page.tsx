@@ -333,7 +333,13 @@ export default function RoomPage() {
 
       {isCreator && !isHandLive && players.length > 0 && (
         <LedgerPanel
-          players={players.map((p) => ({ id: p.id, displayName: p.display_name, seat: p.seat, chipStack: p.chip_stack }))}
+          players={players.map((p) => ({
+            id: p.id,
+            displayName: p.display_name,
+            seat: p.seat,
+            chipStack: p.chip_stack,
+            buyIn: p.buy_in,
+          }))}
           disabled={busy}
           onAdjust={handleLedgerAdjust}
         />

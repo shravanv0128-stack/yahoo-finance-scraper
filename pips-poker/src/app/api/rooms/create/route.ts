@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
         display_name: displayName,
         seat: 0,
         chip_stack: 1000,
+        buy_in: 1000,
         is_active: true,
       })
       .select()

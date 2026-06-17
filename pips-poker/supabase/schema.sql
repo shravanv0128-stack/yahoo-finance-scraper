@@ -32,12 +32,16 @@ create table if not exists players (
   display_name text not null,
   seat integer not null,
   chip_stack numeric(10,2) not null default 1000,
+  buy_in numeric(10,2) not null default 1000,
   is_active boolean not null default true,
   is_away boolean not null default false,
   created_at timestamptz not null default now(),
   unique (room_id, seat),
   unique (room_id, user_id)
 );
+-- Run this once against an existing database to add buy-in tracking without
+-- dropping/recreating the players table:
+-- alter table players add column if not exists buy_in numeric(10,2) not null default 1000;
 
 -- One row per hand played at a room.
 create table if not exists hands (

@@ -53,9 +53,14 @@ export async function POST(req: NextRequest) {
     }
 
     const newStack = Math.max(0, player.chip_stack + body.delta);
+    // Adding chips is a rebuy (more cash put into play, so the buy-in total
+    // grows with it); subtracting is treated as a stack correction/cash-out
+    // and does not change how much the player has bought in for, so their
+    // up/down net stays accurate.
+    const newBuyIn = body.delta > 0 ? player.buy_in + body.delta : player.buy_in;
     const { data: updated, error: updateError } = await supabase
       .from("players")
-      .update({ chip_stack: newStack })
+      .update({ chip_stack: newStack, buy_in: newBuyIn })
       .eq("id", player.id)
       .select()
       .single();
