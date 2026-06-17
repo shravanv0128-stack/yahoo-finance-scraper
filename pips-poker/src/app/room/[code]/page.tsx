@@ -167,6 +167,19 @@ export default function RoomPage() {
     }
   }
 
+  async function handleAbortHand() {
+    setActionError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/hands/abort`, { roomId });
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to end stuck hand");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleLedgerAdjust(playerId: string, delta: number) {
     setActionError(null);
     setBusy(true);
@@ -242,12 +255,19 @@ export default function RoomPage() {
   const isSwapPhase = gameState?.phase === "draw_swap";
   const toCall = myHandPlayer ? Math.max(0, (gameState?.current_bet ?? 0) - myHandPlayer.current_bet) : 0;
   const isRunTwicePending = gameState?.awaiting_run_it_twice ?? false;
-  const isShowDecisionPending = gameState?.phase === "showdown" && (gameState?.awaiting_show_decision ?? false);
-  const isMyShowTurn =
-    isShowDecisionPending && myPlayer != null && gameState?.active_seat === myPlayer.seat && myHandPlayer?.status !== "folded";
+  // After a hand is complete, anyone who didn't win (and didn't fold) can
+  // optionally reveal their cards for show - purely cosmetic, doesn't
+  // affect the payout, which already happened automatically.
+  const canOfferShow =
+    gameState?.phase === "hand_complete" &&
+    myHandPlayer != null &&
+    myHandPlayer.status !== "folded" &&
+    myHandPlayer.mucked &&
+    !myHandPlayer.has_decided_show;
   const isCreator = !!myUserId && room.created_by === myUserId;
   const amInLiveHand = isHandLive && myHandPlayer && myHandPlayer.status !== "folded";
   const canStartHand = !isHandLive || gameState?.phase === "hand_complete";
+  const isStuckHand = isHandLive && gameState?.phase !== "hand_complete";
 
   return (
     <main className="flex min-h-screen flex-col bg-felt-dark">
@@ -360,13 +380,7 @@ export default function RoomPage() {
         <RunItTwicePrompt disabled={busy} onChoose={handleRunTwice} />
       )}
 
-      {isMyShowTurn && (
-        <ShowMuckPrompt
-          isFirstToAct={gameState?.last_aggressor_seat === myPlayer?.seat}
-          disabled={busy}
-          onChoose={handleShowDecision}
-        />
-      )}
+      {canOfferShow && <ShowMuckPrompt disabled={busy} onChoose={handleShowDecision} />}
 
       {gameState?.phase === "hand_complete" && (
         <ShowdownSummary
@@ -389,7 +403,7 @@ export default function RoomPage() {
         </p>
       )}
 
-      {isCreator && canStartHand && players.length > 0 && (
+      {players.length > 0 && (
         <LedgerPanel
           players={players.map((p) => ({
             id: p.id,
@@ -399,8 +413,24 @@ export default function RoomPage() {
             buyIn: p.buy_in,
           }))}
           disabled={busy}
+          canEdit={isCreator && canStartHand}
           onAdjust={handleLedgerAdjust}
         />
+      )}
+
+      {isCreator && isStuckHand && (
+        <div className="mx-auto mt-4 flex w-full max-w-md flex-col items-center gap-2 rounded-lg border border-chip-red/40 bg-felt p-3">
+          <p className="text-center text-xs text-felt-light/80">
+            Hand stuck? This refunds everyone's chips for the current hand and lets you start a new one.
+          </p>
+          <button
+            onClick={handleAbortHand}
+            disabled={busy}
+            className="rounded bg-chip-red px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+          >
+            Force-end stuck hand (refund pot)
+          </button>
+        </div>
       )}
     </main>
   );

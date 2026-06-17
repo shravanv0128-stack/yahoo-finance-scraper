@@ -3,20 +3,16 @@
 import type { ShowDecision } from "@/lib/types";
 
 export function ShowMuckPrompt({
-  isFirstToAct,
   disabled,
   onChoose,
 }: {
-  isFirstToAct: boolean;
   disabled: boolean;
   onChoose: (decision: ShowDecision) => void;
 }) {
   return (
     <div className="mx-auto mt-4 flex w-full max-w-md flex-col items-center gap-3 rounded-lg border border-chip-gold/40 bg-felt p-4">
       <p className="text-center text-sm font-semibold text-white">
-        {isFirstToAct
-          ? "You're up first at showdown - show your cards or muck?"
-          : "Your turn at showdown - show your cards or muck?"}
+        Want to show your cards, or keep them mucked?
       </p>
       <div className="flex gap-3">
         <button
@@ -24,7 +20,7 @@ export function ShowMuckPrompt({
           onClick={() => onChoose("muck")}
           className="rounded bg-slate-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
         >
-          Muck
+          Keep mucked
         </button>
         <button
           disabled={disabled}

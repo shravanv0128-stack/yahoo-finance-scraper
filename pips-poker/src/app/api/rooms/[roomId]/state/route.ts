@@ -55,7 +55,7 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       const { data: hp, error: hpError } = await supabase
         .from("hand_players")
         .select(
-          "id, seat, display_name, status, chip_stack, current_bet, total_committed, has_acted_this_round, has_swapped, revealed_cards, revealed_pip_total, amount_won"
+          "id, seat, display_name, status, chip_stack, current_bet, total_committed, has_acted_this_round, has_swapped, revealed_cards, revealed_pip_total, amount_won, mucked, has_decided_show"
         )
         .eq("hand_id", gameState.hand_id)
         .order("seat", { ascending: true });

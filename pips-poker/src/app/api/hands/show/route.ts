@@ -1,6 +1,6 @@
-// POST /api/hands/show - submit the calling user's show/muck decision
-// during a contested showdown. Only valid for the player whose seat
-// matches game_state.active_seat while awaiting_show_decision is true.
+// POST /api/hands/show - optionally reveal or muck the calling user's hole
+// cards once the hand is already complete. Purely cosmetic: the winner and
+// payout are finalized automatically by runShowdown and never change here.
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";

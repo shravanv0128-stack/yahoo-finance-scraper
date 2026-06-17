@@ -57,8 +57,6 @@ export interface RoomGameState {
   awaiting_run_it_twice: boolean;
   community_cards_2: Card[] | null;
   hand_id: string | null;
-  last_aggressor_seat: number | null;
-  awaiting_show_decision: boolean;
 }
 
 export interface RoomStateResponse {
