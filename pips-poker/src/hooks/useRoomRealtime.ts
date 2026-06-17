@@ -40,6 +40,7 @@ export interface RoomHandPlayer {
   has_swapped: boolean;
   revealed_cards: Card[] | null;
   revealed_pip_total: number | null;
+  amount_won: number;
 }
 
 export interface RoomGameState {

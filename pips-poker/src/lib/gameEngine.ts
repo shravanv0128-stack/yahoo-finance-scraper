@@ -281,6 +281,12 @@ export async function applyBettingAction(
       // whether to run the board once or twice instead of auto-dealing.
       newPhase = "all_in_runout";
       awaitingRunItTwice = true;
+    } else if (gameState.phase === "river_betting") {
+      // River betting just finished with everyone still able to act (no
+      // all-in pause needed) - go straight to showdown, skipping the
+      // "all_in_runout" PHASE_ORDER entry, which only applies when an
+      // earlier all-in forces a pause before a street is still to be dealt.
+      newPhase = "showdown";
     } else {
       newPhase = nextPhase(gameState.phase); // e.g. flop_betting -> draw_swap
       if (newPhase === "turn") {
@@ -687,6 +693,7 @@ export async function runShowdown(
         revealed_cards: e.holeCards,
         revealed_pip_total: e.pipResult.total,
         chip_stack: newStack,
+        amount_won: win,
       })
       .eq("id", e.hand_player_id);
 

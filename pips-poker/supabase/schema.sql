@@ -73,8 +73,11 @@ create table if not exists hand_players (
   has_swapped boolean not null default false,
   revealed_cards jsonb,
   revealed_pip_total integer,
+  amount_won numeric(10,2) not null default 0,
   unique (hand_id, player_id)
 );
+-- Run this once against an existing database to add showdown win tracking:
+-- alter table hand_players add column if not exists amount_won numeric(10,2) not null default 0;
 
 -- Each player's 3 hole cards for a hand. Only readable by that user (or the
 -- server via the service-role key) until showdown copies them into

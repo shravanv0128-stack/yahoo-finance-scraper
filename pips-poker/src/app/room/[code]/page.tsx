@@ -206,6 +206,7 @@ export default function RoomPage() {
   const isRunTwicePending = gameState?.awaiting_run_it_twice ?? false;
   const isCreator = !!myUserId && room.created_by === myUserId;
   const amInLiveHand = isHandLive && myHandPlayer && myHandPlayer.status !== "folded";
+  const canStartHand = !isHandLive || gameState?.phase === "hand_complete";
 
   return (
     <main className="flex min-h-screen flex-col bg-felt-dark">
@@ -223,7 +224,7 @@ export default function RoomPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {amSeated && !isHandLive && (
+          {amSeated && canStartHand && (
             <button
               onClick={() => handleToggleAway(!myPlayer?.is_away)}
               disabled={busy}
@@ -234,7 +235,7 @@ export default function RoomPage() {
               {myPlayer?.is_away ? "I'm back" : "I'm away"}
             </button>
           )}
-          {amSeated && !isHandLive && (
+          {amSeated && canStartHand && (
             <button
               onClick={handleStart}
               disabled={busy || players.length < 2}
@@ -327,11 +328,12 @@ export default function RoomPage() {
             revealedCards: hp.revealed_cards,
             revealedPipTotal: hp.revealed_pip_total,
             folded: hp.status === "folded",
+            amountWon: hp.amount_won,
           }))}
         />
       )}
 
-      {isCreator && !isHandLive && players.length > 0 && (
+      {isCreator && canStartHand && players.length > 0 && (
         <LedgerPanel
           players={players.map((p) => ({
             id: p.id,

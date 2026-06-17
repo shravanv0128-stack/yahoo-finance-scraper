@@ -35,10 +35,10 @@ export async function POST(req: NextRequest) {
 
     const { data: gameState } = await supabase
       .from("game_state")
-      .select("hand_id")
+      .select("hand_id, phase")
       .eq("room_id", body.roomId)
       .maybeSingle();
-    if (gameState?.hand_id) {
+    if (gameState?.hand_id && gameState.phase !== "hand_complete") {
       return NextResponse.json({ error: "Cannot adjust stacks while a hand is in progress" }, { status: 409 });
     }
 
