@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  background-color: #051a13;
+  color: #f5f0e6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Range slider thumb styling for the bet-size slider in BettingControls,
+   since Tailwind's accent-* utility alone doesn't fully restyle WebKit
+   thumbs in all browsers. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #d4af37;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(212, 175, 55, 0.8);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #d4af37;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 4px rgba(212, 175, 55, 0.8);
+}
