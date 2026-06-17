@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { ensureSession } from "@/lib/supabaseClient";
 
 export default function HomePage() {
   const router = useRouter();
@@ -13,8 +13,8 @@ export default function HomePage() {
   const [busy, setBusy] = useState(false);
 
   async function authedFetch(url: string, body: unknown) {
-    const { data: session } = await supabase.auth.getSession();
-    const token = session.session?.access_token;
+    const session = await ensureSession();
+    const token = session?.access_token;
     const res = await fetch(url, {
       method: "POST",
       headers: {

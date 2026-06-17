@@ -14,7 +14,7 @@
 // boundary even though this client code never attempts to read others'.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, ensureSession } from "@/lib/supabaseClient";
 import type { Card, GamePhase } from "@/lib/types";
 
 export interface RoomPlayer {
@@ -70,8 +70,8 @@ export function useRoomRealtime(roomId: string) {
 
   const refresh = useCallback(async () => {
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
+      const session = await ensureSession();
+      const token = session?.access_token;
       const res = await fetch(`/api/rooms/${roomId}/state`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
