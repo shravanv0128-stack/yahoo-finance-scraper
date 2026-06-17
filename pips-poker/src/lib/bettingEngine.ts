@@ -107,12 +107,11 @@ export function applyAction(
       if (action === "raise" && state.currentBet === 0) {
         return { state, error: "Cannot raise when there is no bet yet; use bet" };
       }
-      if (raiseIncrement < state.minRaise && amount < player.chip_stack) {
-        // Allow under-min raises only if the player is going all-in with everything they have.
-        return { state, error: `Raise must be at least ${state.minRaise} above the current bet` };
-      }
       if (amount > player.chip_stack) {
         return { state, error: "Not enough chips for that bet/raise" };
+      }
+      if (amount > state.pot) {
+        return { state, error: `Max bet is the size of the pot ($${state.pot})` };
       }
       player.chip_stack -= amount;
       player.current_bet += amount;

@@ -5,7 +5,6 @@ import type { BettingAction } from "@/lib/types";
 
 export interface BettingControlsProps {
   toCall: number;
-  minRaise: number;
   chipStack: number;
   pot: number;
   disabled: boolean;
@@ -15,16 +14,17 @@ export interface BettingControlsProps {
 // Bottom-docked horizontal action bar, PokerNow-style: Fold / Check-or-Call /
 // Raise buttons on the left, a bet-size slider with quick-size shortcuts
 // (1/2 pot, pot, all-in) on the right for sizing a bet or raise.
-export function BettingControls({ toCall, minRaise, chipStack, pot, disabled, onAction }: BettingControlsProps) {
-  const maxBet = Math.max(chipStack, minRaise);
-  const [raiseAmount, setRaiseAmount] = useState(Math.min(minRaise, maxBet));
+export function BettingControls({ toCall, chipStack, pot, disabled, onAction }: BettingControlsProps) {
+  // Pot-limit: the most a player can ever bet/raise is the current size of the pot.
+  const maxBet = Math.max(1, Math.min(chipStack, pot));
+  const [raiseAmount, setRaiseAmount] = useState(Math.min(1, maxBet));
 
   useEffect(() => {
-    setRaiseAmount(Math.min(Math.max(minRaise, 1), maxBet));
-  }, [minRaise, maxBet]);
+    setRaiseAmount(Math.min(1, maxBet));
+  }, [maxBet]);
 
-  const halfPot = Math.min(maxBet, Math.max(minRaise, Math.round(pot / 2)));
-  const fullPot = Math.min(maxBet, Math.max(minRaise, pot));
+  const halfPot = Math.min(maxBet, Math.round(pot / 2));
+  const fullPot = maxBet;
 
   return (
     <div className="flex w-full flex-col gap-3 border-t border-white/10 bg-slate-900/95 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -65,7 +65,7 @@ export function BettingControls({ toCall, minRaise, chipStack, pot, disabled, on
       <div className="flex flex-1 items-center gap-3 sm:max-w-md">
         <input
           type="range"
-          min={Math.min(minRaise, maxBet)}
+          min={1}
           max={maxBet}
           value={raiseAmount}
           disabled={disabled}
@@ -74,7 +74,7 @@ export function BettingControls({ toCall, minRaise, chipStack, pot, disabled, on
         />
         <input
           type="number"
-          min={minRaise}
+          min={1}
           max={maxBet}
           value={raiseAmount}
           disabled={disabled}

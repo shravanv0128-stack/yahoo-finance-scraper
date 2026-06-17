@@ -301,7 +301,6 @@ export default function RoomPage() {
       {isMyTurn && isBettingPhase && myHandPlayer && (
         <BettingControls
           toCall={toCall}
-          minRaise={gameState?.min_raise ?? 1}
           chipStack={myHandPlayer.chip_stack}
           pot={gameState?.pot ?? 0}
           disabled={busy}

@@ -13,7 +13,6 @@ export default function HomePage() {
   const [joinCode, setJoinCode] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [anteAmount, setAnteAmount] = useState("0.5");
-  const [minBet, setMinBet] = useState("1");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -58,7 +57,6 @@ export default function HomePage() {
         name: name || "Pips Poker Table",
         displayName,
         anteAmount: Number(anteAmount) || undefined,
-        minBet: Number(minBet) || undefined,
       });
       router.push(`/room/${data.room.id}`);
     } catch (e) {
@@ -130,37 +128,22 @@ export default function HomePage() {
             onChange={(e) => setName(e.target.value)}
             placeholder="Table name"
           />
-          <div className="mb-2 flex gap-2">
-            <div className="flex-1">
-              <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
-                Ante (per hand)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
-                value={anteAmount}
-                onChange={(e) => setAnteAmount(e.target.value)}
-              />
-            </div>
-            <div className="flex-1">
-              <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
-                Min bet/raise
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
-                value={minBet}
-                onChange={(e) => setMinBet(e.target.value)}
-              />
-            </div>
+          <div className="mb-2">
+            <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
+              Bomb pot (per hand)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+              value={anteAmount}
+              onChange={(e) => setAnteAmount(e.target.value)}
+            />
           </div>
           <p className="mb-2 text-[11px] text-felt-light/70">
-            No traditional blinds here — every player antes each hand (bomb-pot style), then bets in fixed
-            increments starting at the min bet above.
+            Every player puts in the bomb pot each hand — no blinds. Bets are plain dollar amounts; the
+            most you can ever bet or raise is the size of the pot.
           </p>
           <button
             onClick={createRoom}
