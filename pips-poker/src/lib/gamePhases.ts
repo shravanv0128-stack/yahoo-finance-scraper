@@ -16,6 +16,7 @@ export const PHASE_ORDER: GamePhase[] = [
   "turn_betting",
   "river",
   "river_betting",
+  "all_in_runout",
   "showdown",
   "hand_complete",
 ];

@@ -24,6 +24,7 @@ export interface RoomPlayer {
   seat: number;
   chip_stack: number;
   is_active: boolean;
+  is_away: boolean;
 }
 
 export interface RoomHandPlayer {
@@ -48,11 +49,14 @@ export interface RoomGameState {
   min_raise: number;
   dealer_seat: number;
   active_seat: number | null;
+  act_deadline: string | null;
+  awaiting_run_it_twice: boolean;
+  community_cards_2: Card[] | null;
   hand_id: string | null;
 }
 
 export interface RoomStateResponse {
-  room: { id: string; code: string; name: string };
+  room: { id: string; code: string; name: string; created_by: string; ante_amount: number; small_bet: number };
   players: RoomPlayer[];
   gameState: RoomGameState | null;
   handPlayers: RoomHandPlayer[];

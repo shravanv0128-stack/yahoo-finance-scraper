@@ -13,6 +13,10 @@ import { Table, type TableSeatData } from "@/components/Table";
 import { BettingControls } from "@/components/BettingControls";
 import { DrawSwapControls } from "@/components/DrawSwapControls";
 import { ShowdownSummary } from "@/components/ShowdownSummary";
+import { LedgerPanel } from "@/components/LedgerPanel";
+import { RunItTwicePrompt } from "@/components/RunItTwicePrompt";
+import { ActionTimer } from "@/components/ActionTimer";
+import { CommunityBoard } from "@/components/CommunityBoard";
 import type { BettingAction } from "@/lib/types";
 
 const BETTING_PHASES = new Set(["flop_betting", "turn_betting", "river_betting"]);
@@ -112,6 +116,45 @@ export default function RoomPage() {
     }
   }
 
+  async function handleRunTwice(runTwice: boolean) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/hands/run-twice`, { roomId, runTwice });
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to resolve run-it-twice");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleLedgerAdjust(playerId: string, delta: number) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/rooms/ledger`, { roomId, playerId, delta });
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to adjust stack");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleToggleAway(away: boolean) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/players/away`, { roomId, away });
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to update away status");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading && !data) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-felt-dark text-white">
@@ -160,6 +203,9 @@ export default function RoomPage() {
   const isBettingPhase = gameState ? BETTING_PHASES.has(gameState.phase) : false;
   const isSwapPhase = gameState?.phase === "draw_swap";
   const toCall = myHandPlayer ? Math.max(0, (gameState?.current_bet ?? 0) - myHandPlayer.current_bet) : 0;
+  const isRunTwicePending = gameState?.awaiting_run_it_twice ?? false;
+  const isCreator = !!myUserId && room.created_by === myUserId;
+  const amInLiveHand = isHandLive && myHandPlayer && myHandPlayer.status !== "folded";
 
   return (
     <main className="flex min-h-screen flex-col bg-felt-dark">
@@ -169,17 +215,35 @@ export default function RoomPage() {
           <p className="text-xs text-white/60">
             Room code: <span className="font-mono">{room.code}</span> &middot; Phase:{" "}
             {gameState?.phase ?? "waiting_room"}
+            {isMyTurn && isBettingPhase && (
+              <>
+                {" "}&middot; Your action: <ActionTimer deadline={gameState?.act_deadline ?? null} />
+              </>
+            )}
           </p>
         </div>
-        {amSeated && !isHandLive && (
-          <button
-            onClick={handleStart}
-            disabled={busy || players.length < 2}
-            className="rounded bg-chip-gold px-4 py-2 text-sm font-semibold text-felt-dark disabled:opacity-40"
-          >
-            Start hand
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {amSeated && !isHandLive && (
+            <button
+              onClick={() => handleToggleAway(!myPlayer?.is_away)}
+              disabled={busy}
+              className={`rounded px-3 py-2 text-xs font-semibold disabled:opacity-40 ${
+                myPlayer?.is_away ? "bg-chip-gold text-felt-dark" : "bg-slate-700 text-white"
+              }`}
+            >
+              {myPlayer?.is_away ? "I'm back" : "I'm away"}
+            </button>
+          )}
+          {amSeated && !isHandLive && (
+            <button
+              onClick={handleStart}
+              disabled={busy || players.length < 2}
+              className="rounded bg-chip-gold px-4 py-2 text-sm font-semibold text-felt-dark disabled:opacity-40"
+            >
+              Start hand
+            </button>
+          )}
+        </div>
       </header>
 
       {actionError && (
@@ -227,6 +291,13 @@ export default function RoomPage() {
         />
       </div>
 
+      {gameState?.community_cards_2 && (
+        <div className="mx-auto -mt-2 mb-2 flex flex-col items-center gap-1">
+          <p className="text-[10px] uppercase tracking-wide text-chip-gold">Board 2 (run it twice)</p>
+          <CommunityBoard cards={gameState.community_cards_2} />
+        </div>
+      )}
+
       {isMyTurn && isBettingPhase && myHandPlayer && (
         <BettingControls
           toCall={toCall}
@@ -244,6 +315,10 @@ export default function RoomPage() {
         </div>
       )}
 
+      {isRunTwicePending && amInLiveHand && (
+        <RunItTwicePrompt disabled={busy} onChoose={handleRunTwice} />
+      )}
+
       {gameState?.phase === "hand_complete" && (
         <ShowdownSummary
           players={handPlayers.map((hp) => ({
@@ -254,6 +329,14 @@ export default function RoomPage() {
             revealedPipTotal: hp.revealed_pip_total,
             folded: hp.status === "folded",
           }))}
+        />
+      )}
+
+      {isCreator && !isHandLive && players.length > 0 && (
+        <LedgerPanel
+          players={players.map((p) => ({ id: p.id, displayName: p.display_name, seat: p.seat, chipStack: p.chip_stack }))}
+          disabled={busy}
+          onAdjust={handleLedgerAdjust}
         />
       )}
     </main>

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";
+import { enforceActTimeout } from "@/lib/gameEngine";
 
 export async function GET(req: NextRequest, { params }: { params: { roomId: string } }) {
   try {
@@ -16,6 +17,14 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
 
     const supabase = getServiceRoleClient();
     const roomId = params.roomId;
+
+    // Auto-fold/check anyone whose 1-minute action clock has expired before
+    // reading state back out, since there's no background timer elsewhere.
+    try {
+      await enforceActTimeout(supabase, roomId);
+    } catch {
+      // Best-effort; if this races with a real action it's safe to ignore.
+    }
 
     const { data: room, error: roomError } = await supabase
       .from("rooms")
@@ -80,6 +89,9 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
           min_raise: gameState.min_raise,
           dealer_seat: gameState.dealer_seat,
           active_seat: gameState.active_seat,
+          act_deadline: gameState.act_deadline,
+          awaiting_run_it_twice: gameState.awaiting_run_it_twice,
+          community_cards_2: gameState.community_cards_2,
           hand_id: gameState.hand_id,
         }
       : null;

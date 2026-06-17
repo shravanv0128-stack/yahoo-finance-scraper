@@ -33,6 +33,7 @@ create table if not exists players (
   seat integer not null,
   chip_stack numeric(10,2) not null default 1000,
   is_active boolean not null default true,
+  is_away boolean not null default false,
   created_at timestamptz not null default now(),
   unique (room_id, seat),
   unique (room_id, user_id)
@@ -97,6 +98,9 @@ create table if not exists game_state (
   min_raise numeric(10,2) not null default 0,
   dealer_seat integer not null default 0,
   active_seat integer,
+  act_deadline timestamptz,
+  awaiting_run_it_twice boolean not null default false,
+  community_cards_2 jsonb,
   updated_at timestamptz not null default now()
 );
 
@@ -161,3 +165,13 @@ create index if not exists actions_hand_id_idx on actions (hand_id);
 alter publication supabase_realtime add table game_state;
 alter publication supabase_realtime add table hand_players;
 alter publication supabase_realtime add table actions;
+
+-- ============================================================================
+-- Migration: run this block against an existing database that was created
+-- before the ledger / run-it-twice / timer / away-status features were
+-- added. Safe to re-run (IF NOT EXISTS guards each column).
+-- ============================================================================
+alter table players add column if not exists is_away boolean not null default false;
+alter table game_state add column if not exists act_deadline timestamptz;
+alter table game_state add column if not exists awaiting_run_it_twice boolean not null default false;
+alter table game_state add column if not exists community_cards_2 jsonb;

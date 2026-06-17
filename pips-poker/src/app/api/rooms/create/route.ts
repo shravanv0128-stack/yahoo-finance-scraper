@@ -10,7 +10,12 @@ function generateRoomCode(): string {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, displayName } = body as { name?: string; displayName?: string };
+    const { name, displayName, anteAmount, minBet } = body as {
+      name?: string;
+      displayName?: string;
+      anteAmount?: number;
+      minBet?: number;
+    };
     if (!displayName) {
       return NextResponse.json({ error: "displayName is required" }, { status: 400 });
     }
@@ -28,8 +33,8 @@ export async function POST(req: NextRequest) {
         code: generateRoomCode(),
         name: name ?? "Pips Poker Table",
         created_by: user.id,
-        ante_amount: 0.5,
-        small_bet: 1,
+        ante_amount: anteAmount && anteAmount > 0 ? anteAmount : 0.5,
+        small_bet: minBet && minBet > 0 ? minBet : 1,
       })
       .select()
       .single();

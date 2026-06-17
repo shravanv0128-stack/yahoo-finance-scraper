@@ -26,6 +26,7 @@ export type GamePhase =
   | "turn_betting"
   | "river"
   | "river_betting"
+  | "all_in_runout"
   | "showdown"
   | "hand_complete";
 
@@ -41,6 +42,7 @@ export interface Player {
   seat: number;
   chip_stack: number;
   is_active: boolean; // seated and not sitting out
+  is_away: boolean; // marked away by the player themselves; skipped when dealing new hands
   created_at?: string;
 }
 
@@ -92,6 +94,9 @@ export interface GameStateRow {
   min_raise: number;
   dealer_seat: number;
   active_seat: number | null; // whose turn it is to act (betting rounds only)
+  act_deadline: string | null; // ISO timestamp; active_seat must act by this time or is auto-folded/checked
+  awaiting_run_it_twice: boolean; // true once all remaining contenders are all-in and a run-twice decision is pending
+  community_cards_2: Card[] | null; // second board, only populated when run-it-twice was chosen
   updated_at: string;
 }
 
