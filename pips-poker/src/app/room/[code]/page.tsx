@@ -4,7 +4,7 @@
 // page links to (room.id is passed as this segment); it is treated purely
 // as the room identifier for /api/rooms/:roomId/* calls.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase, getSession, signInWithGoogle } from "@/lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
@@ -47,6 +47,30 @@ export default function RoomPage() {
     });
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  // Auto-deal the next hand 5 seconds after showdown so the table doesn't
+  // stall waiting on someone to click "Start hand". Only the room creator's
+  // client triggers it (mirrors the ledger's creator-only restriction) and
+  // each completed hand_id only triggers this once.
+  const autoStartedHandId = useRef<string | null>(null);
+  useEffect(() => {
+    const gameState = data?.gameState;
+    const players = data?.players ?? [];
+    const isCreator = !!data?.myUserId && data?.room.created_by === data?.myUserId;
+    if (
+      gameState?.phase !== "hand_complete" ||
+      !isCreator ||
+      players.length < 2 ||
+      autoStartedHandId.current === gameState.hand_id
+    ) {
+      return;
+    }
+    autoStartedHandId.current = gameState.hand_id;
+    const timer = setTimeout(() => {
+      handleStart();
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [data?.gameState?.phase, data?.gameState?.hand_id, data?.myUserId, data?.players.length]);
 
   async function authedFetch(url: string, body: unknown) {
     const token = session?.access_token;
@@ -331,6 +355,12 @@ export default function RoomPage() {
             amountWon: hp.amount_won,
           }))}
         />
+      )}
+
+      {gameState?.phase === "hand_complete" && (
+        <p className="mx-auto mt-2 text-center text-xs text-felt-light/70">
+          Next hand starts automatically in a few seconds...
+        </p>
       )}
 
       {isCreator && canStartHand && players.length > 0 && (
