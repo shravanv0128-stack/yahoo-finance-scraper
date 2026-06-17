@@ -114,11 +114,14 @@ create table if not exists game_state (
   community_cards_2 jsonb,
   last_aggressor_seat integer,
   awaiting_show_decision boolean not null default false,
+  showdown_result jsonb,
   updated_at timestamptz not null default now()
 );
 -- Run this once against an existing database to add show/muck tracking:
 -- alter table game_state add column if not exists last_aggressor_seat integer;
 -- alter table game_state add column if not exists awaiting_show_decision boolean not null default false;
+-- Run this once to add the per-board showdown breakdown ("who won which pot"):
+-- alter table game_state add column if not exists showdown_result jsonb;
 
 -- Append-only betting/action log for replay and audit.
 create table if not exists actions (

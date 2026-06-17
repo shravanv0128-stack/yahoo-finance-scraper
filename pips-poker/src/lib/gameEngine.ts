@@ -10,7 +10,15 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { freshShuffledDeck, drawCards, drawReplacements } from "./deck";
-import { Card, GamePhase, BettingAction, ShowdownPlayerResult, ShowDecision } from "./types";
+import {
+  Card,
+  GamePhase,
+  BettingAction,
+  ShowdownPlayerResult,
+  ShowDecision,
+  ShowdownResult,
+  ShowdownBoardResult,
+} from "./types";
 import { nextPhase } from "./gamePhases";
 import {
   BettingPlayerState,
@@ -20,7 +28,7 @@ import {
   resetForNewRound,
   buildSidePots,
 } from "./bettingEngine";
-import { evaluateBestHand, findHandWinners } from "./handEvaluator";
+import { evaluateBestHand, findHandWinners, handCategoryLabel } from "./handEvaluator";
 import { computePipTotal, findPipWinners } from "./pipEvaluator";
 
 const ACT_TIMEOUT_MS = 60_000;
@@ -163,6 +171,7 @@ export async function startNewHand(supabase: SupabaseClient, roomId: string) {
       act_deadline: newActDeadline(),
       awaiting_run_it_twice: false,
       community_cards_2: null,
+      showdown_result: null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "room_id" }
@@ -646,21 +655,39 @@ export async function runShowdown(
   const winnings = new Map<string, number>();
   for (const e of entries) winnings.set(e.hand_player_id, 0);
 
+  // Build a display-ready, per-board breakdown alongside the raw chip math
+  // so the client can show exactly who won which pot and with what hand.
+  const boardResults: ShowdownBoardResult[] = [];
+  const ranItTwice = resolvedBoards.length === 2;
+
   if (contenders.length === 1) {
     // Everyone else folded; sole remaining player takes the entire pot
     // (both halves), no hand evaluation needed.
     winnings.set(entries[0].hand_player_id, gameState.pot);
+    boardResults.push({
+      label: "",
+      communityCards: resolvedBoards[0],
+      pokerWinners: [
+        { displayName: entries[0].display_name, amount: gameState.pot, handLabel: "Everyone else folded" },
+      ],
+      pipWinners: [],
+    });
   } else {
     // Each side pot is split evenly across the run-out boards (1 or 2 for
     // "run it twice"), and within each board's share, split 50/50 between
     // the poker half and the pip half. Each sub-pot is restricted to that
     // side pot's eligible players, mirroring how side pots normally
     // distribute betting chips.
-    for (const sidePot of sidePots) {
-      const eligibleHandPlayerIds = sidePot.eligibleHandPlayerIds;
-      const perBoardAmount = sidePot.amount / resolvedBoards.length;
+    resolvedBoards.forEach((board, boardIdx) => {
+      // Per-board aggregation of who won the poker half and the pip half
+      // (summed across all side pots for this board).
+      const pokerAgg = new Map<string, { amount: number; handLabel: string }>();
+      const pipAgg = new Map<string, { amount: number; pipTotal: number }>();
 
-      for (const board of resolvedBoards) {
+      for (const sidePot of sidePots) {
+        const eligibleHandPlayerIds = sidePot.eligibleHandPlayerIds;
+        const perBoardAmount = sidePot.amount / resolvedBoards.length;
+
         const eligibleEntries = entries
           .filter((e) => eligibleHandPlayerIds.includes(e.hand_player_id))
           .map((e) => ({ ...e, bestHand: evaluateBestHand(e.holeCards, board) }));
@@ -669,11 +696,51 @@ export async function runShowdown(
         const pokerHalf = perBoardAmount / 2;
         const pipHalf = perBoardAmount - pokerHalf; // ensures halves sum exactly to perBoardAmount
 
-        distributeShare(pokerHalf, findHandWinners(eligibleEntries), winnings);
-        distributeShare(pipHalf, findPipWinners(eligibleEntries), winnings);
+        const pokerWinners = findHandWinners(eligibleEntries);
+        const pipWinners = findPipWinners(eligibleEntries);
+        distributeShare(pokerHalf, pokerWinners, winnings);
+        distributeShare(pipHalf, pipWinners, winnings);
+
+        const pokerEach = pokerHalf / pokerWinners.length;
+        for (const w of pokerWinners) {
+          const prev = pokerAgg.get(w.display_name);
+          pokerAgg.set(w.display_name, {
+            amount: (prev?.amount ?? 0) + pokerEach,
+            handLabel: handCategoryLabel(w.bestHand),
+          });
+        }
+        const pipEach = pipHalf / pipWinners.length;
+        for (const w of pipWinners) {
+          const prev = pipAgg.get(w.display_name);
+          pipAgg.set(w.display_name, {
+            amount: (prev?.amount ?? 0) + pipEach,
+            pipTotal: w.pipResult.total,
+          });
+        }
       }
-    }
+
+      boardResults.push({
+        label: ranItTwice ? `Board ${boardIdx + 1}` : "",
+        communityCards: board,
+        pokerWinners: Array.from(pokerAgg.entries()).map(([displayName, v]) => ({
+          displayName,
+          amount: Math.round(v.amount * 100) / 100,
+          handLabel: v.handLabel,
+        })),
+        pipWinners: Array.from(pipAgg.entries()).map(([displayName, v]) => ({
+          displayName,
+          amount: Math.round(v.amount * 100) / 100,
+          pipTotal: v.pipTotal,
+        })),
+      });
+    });
   }
+
+  const showdownResult: ShowdownResult = {
+    ranItTwice,
+    uncontested: contenders.length === 1,
+    boards: boardResults,
+  };
 
   const showdownResults: ShowdownPlayerResult[] = entries.map((e) => ({
     hand_player_id: e.hand_player_id,
@@ -686,23 +753,24 @@ export async function runShowdown(
     totalWin: winnings.get(e.hand_player_id) ?? 0,
   }));
 
-  // Persist: update chip stacks (hand_players + players table). Winners'
-  // cards are revealed automatically (they have to be shown to prove the
-  // win); non-winners default to mucked/hidden, but can choose to reveal
-  // afterwards via applyShowDecision (purely cosmetic - it never changes
-  // who won or how much they won, which is already final at this point).
+  // Persist: update chip stacks (hand_players + players table). When the pot
+  // was contested (multiple players saw the river), everyone's cards are
+  // revealed so the table can see exactly what each player held and why the
+  // pot split the way it did. When it was uncontested (everyone folded), the
+  // sole winner's cards stay hidden - they never had to show.
+  const uncontested = contenders.length === 1;
   for (const e of entries) {
     const win = winnings.get(e.hand_player_id) ?? 0;
     const hp = (handPlayers as HandPlayerRow[]).find((p) => p.id === e.hand_player_id)!;
     const newStack = hp.chip_stack + win;
-    const isWinner = win > 0;
+    const reveal = !uncontested;
 
     await supabase
       .from("hand_players")
       .update({
-        revealed_cards: isWinner ? e.holeCards : null,
-        revealed_pip_total: isWinner ? e.pipResult.total : null,
-        mucked: !isWinner,
+        revealed_cards: reveal ? e.holeCards : null,
+        revealed_pip_total: reveal ? e.pipResult.total : null,
+        mucked: !reveal,
         chip_stack: newStack,
         amount_won: win,
       })
@@ -719,6 +787,7 @@ export async function runShowdown(
       active_seat: null,
       act_deadline: null,
       awaiting_run_it_twice: false,
+      showdown_result: showdownResult,
       updated_at: new Date().toISOString(),
     })
     .eq("room_id", roomId);

@@ -153,6 +153,22 @@ export interface PipResult {
   total: number;
 }
 
+// Structured, display-ready breakdown of how a hand's pot was awarded,
+// persisted on game_state.showdown_result so the client can show a clear
+// "who won which pot" summary - one entry per board (two when run twice).
+export interface ShowdownBoardResult {
+  label: string; // "" for a normal single board, "Board 1"/"Board 2" when run twice
+  communityCards: Card[];
+  pokerWinners: { displayName: string; amount: number; handLabel: string }[];
+  pipWinners: { displayName: string; amount: number; pipTotal: number }[];
+}
+
+export interface ShowdownResult {
+  ranItTwice: boolean;
+  uncontested: boolean; // true when everyone else folded (no cards need showing)
+  boards: ShowdownBoardResult[];
+}
+
 export interface ShowdownPlayerResult {
   hand_player_id: string;
   seat: number;

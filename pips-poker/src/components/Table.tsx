@@ -90,6 +90,7 @@ export function Table({ seats, dealerSeat, communityCards, pot, currentBet, mySe
               holeCards={s.holeCards}
               revealedCards={s.revealedCards}
               revealedPipTotal={s.revealedPipTotal}
+              communityCards={communityCards}
             />
           </div>
         );

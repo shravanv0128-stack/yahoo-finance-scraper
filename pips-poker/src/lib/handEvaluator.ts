@@ -162,6 +162,89 @@ export function evaluateBestHand(holeCards: Card[], boardCards: Card[]): HandRan
 }
 
 /**
+ * Like evaluateBestHand, but tolerant of a partial board (3, 4, or 5
+ * community cards) so the live UI can tell a player what they're currently
+ * holding before the river. Still enforces exactly-2-hole + exactly-3-board.
+ * Returns null if there aren't yet enough cards to form a hand.
+ */
+export function evaluateBestHandFlexible(holeCards: Card[], boardCards: Card[]): HandRankResult | null {
+  if (holeCards.length !== 3) return null;
+  if (boardCards.length < 3) return null;
+
+  const holeCombos = combinations(holeCards, 2); // C(3,2) = 3
+  const boardCombos = combinations(boardCards, 3); // C(n,3), n in 3..5
+
+  let best: HandRankResult | null = null;
+  for (const holeCombo of holeCombos) {
+    for (const boardCombo of boardCombos) {
+      const five = [...holeCombo, ...boardCombo];
+      const { category, tiebreakers } = evaluateFiveCardHand(five);
+      const candidate: HandRankResult = {
+        category,
+        categoryRank: CATEGORY_RANK[category],
+        tiebreakers,
+        cards: five,
+        holeCardsUsed: holeCombo as [Card, Card],
+        boardCardsUsed: boardCombo as [Card, Card, Card],
+      };
+      if (best === null || compareHandRanks(candidate, best) > 0) best = candidate;
+    }
+  }
+  return best;
+}
+
+const VALUE_TO_RANK_NAME: Record<number, string> = {
+  14: "A",
+  13: "K",
+  12: "Q",
+  11: "J",
+  10: "10",
+  9: "9",
+  8: "8",
+  7: "7",
+  6: "6",
+  5: "5",
+  4: "4",
+  3: "3",
+  2: "2",
+};
+
+function rankName(value: number): string {
+  return VALUE_TO_RANK_NAME[value] ?? String(value);
+}
+
+/**
+ * A short, human-friendly label for a poker hand, e.g. "Pair of 6s",
+ * "Two pair", "Trips", "Flush", "Royal flush". Used for the live ribbon
+ * under the player's own cards and the per-board showdown breakdown.
+ */
+export function handCategoryLabel(result: HandRankResult): string {
+  const tb = result.tiebreakers;
+  switch (result.category) {
+    case "high_card":
+      return `High card ${rankName(tb[0])}`;
+    case "pair":
+      return `Pair of ${rankName(tb[0])}s`;
+    case "two_pair":
+      return `Two pair, ${rankName(tb[0])}s & ${rankName(tb[1])}s`;
+    case "three_of_a_kind":
+      return `Trips, ${rankName(tb[0])}s`;
+    case "straight":
+      return `Straight, ${rankName(tb[0])} high`;
+    case "flush":
+      return `Flush, ${rankName(tb[0])} high`;
+    case "full_house":
+      return `Full house, ${rankName(tb[0])}s over ${rankName(tb[1])}s`;
+    case "four_of_a_kind":
+      return `Quads, ${rankName(tb[0])}s`;
+    case "straight_flush":
+      return tb[0] === 14 ? "Royal flush" : `Straight flush, ${rankName(tb[0])} high`;
+    default:
+      return "High card";
+  }
+}
+
+/**
  * Compare two HandRankResults. Returns positive if `a` beats `b`, negative
  * if `b` beats `a`, 0 if exactly tied (same category and tiebreakers).
  */

@@ -4,7 +4,7 @@
 // page links to (room.id is passed as this segment); it is treated purely
 // as the room identifier for /api/rooms/:roomId/* calls.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase, getSession, signInWithGoogle } from "@/lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
@@ -49,29 +49,22 @@ export default function RoomPage() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Auto-deal the next hand 5 seconds after showdown so the table doesn't
-  // stall waiting on someone to click "Start hand". Only the room creator's
-  // client triggers it (mirrors the ledger's creator-only restriction) and
-  // each completed hand_id only triggers this once.
-  const autoStartedHandId = useRef<string | null>(null);
+  // The next hand is dealt automatically by the server a few seconds after a
+  // hand completes (see the room state GET route), so no client timer is
+  // needed for that. What we DO stage on the client is the run-it-twice
+  // reveal: show board 1 and its result first, then board 2 a few seconds
+  // later, so two run-outs are easy to follow instead of appearing at once.
+  const [revealStage, setRevealStage] = useState(1);
   useEffect(() => {
-    const gameState = data?.gameState;
-    const players = data?.players ?? [];
-    const isCreator = !!data?.myUserId && data?.room.created_by === data?.myUserId;
-    if (
-      gameState?.phase !== "hand_complete" ||
-      !isCreator ||
-      players.length < 2 ||
-      autoStartedHandId.current === gameState.hand_id
-    ) {
+    const gs = data?.gameState;
+    if (gs?.phase !== "hand_complete" || !gs.showdown_result?.ranItTwice) {
+      setRevealStage(1);
       return;
     }
-    autoStartedHandId.current = gameState.hand_id;
-    const timer = setTimeout(() => {
-      handleStart();
-    }, 5000);
+    setRevealStage(1);
+    const timer = setTimeout(() => setRevealStage(2), 3000);
     return () => clearTimeout(timer);
-  }, [data?.gameState?.phase, data?.gameState?.hand_id, data?.myUserId, data?.players.length]);
+  }, [data?.gameState?.phase, data?.gameState?.hand_id, data?.gameState?.showdown_result?.ranItTwice]);
 
   async function authedFetch(url: string, body: unknown) {
     const token = session?.access_token;
@@ -355,8 +348,15 @@ export default function RoomPage() {
 
       {gameState?.community_cards_2 && (
         <div className="mx-auto -mt-2 mb-2 flex flex-col items-center gap-1">
-          <p className="text-[10px] uppercase tracking-wide text-chip-gold">Board 2 (run it twice)</p>
-          <CommunityBoard cards={gameState.community_cards_2} />
+          <p className="text-[10px] uppercase tracking-wide text-chip-gold">Board 1</p>
+          {revealStage >= 2 ? (
+            <>
+              <p className="mt-2 text-[10px] uppercase tracking-wide text-chip-gold">Board 2 (run it twice)</p>
+              <CommunityBoard cards={gameState.community_cards_2} />
+            </>
+          ) : (
+            <p className="mt-1 text-[10px] italic text-felt-light/70">Revealing second board…</p>
+          )}
         </div>
       )}
 
@@ -384,6 +384,8 @@ export default function RoomPage() {
 
       {gameState?.phase === "hand_complete" && (
         <ShowdownSummary
+          result={gameState.showdown_result}
+          visibleBoards={revealStage}
           players={handPlayers.map((hp) => ({
             seat: hp.seat,
             displayName: hp.display_name,

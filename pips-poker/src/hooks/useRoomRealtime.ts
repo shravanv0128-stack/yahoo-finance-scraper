@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, getSession } from "@/lib/supabaseClient";
-import type { Card, GamePhase } from "@/lib/types";
+import type { Card, GamePhase, ShowdownResult } from "@/lib/types";
 
 export interface RoomPlayer {
   id: string;
@@ -56,6 +56,7 @@ export interface RoomGameState {
   act_deadline: string | null;
   awaiting_run_it_twice: boolean;
   community_cards_2: Card[] | null;
+  showdown_result: ShowdownResult | null;
   hand_id: string | null;
 }
 

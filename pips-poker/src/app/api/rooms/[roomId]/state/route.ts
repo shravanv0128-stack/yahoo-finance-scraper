@@ -6,7 +6,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";
-import { enforceActTimeout } from "@/lib/gameEngine";
+import { enforceActTimeout, startNewHand } from "@/lib/gameEngine";
+
+// How long the completed-hand summary stays on screen before the next hand
+// is dealt automatically. Long enough to read who won (and to watch both
+// boards when the hand was run twice).
+const AUTO_NEXT_HAND_MS = 6000;
 
 export async function GET(req: NextRequest, { params }: { params: { roomId: string } }) {
   try {
@@ -42,11 +47,60 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       .order("seat", { ascending: true });
     if (playersError) throw playersError;
 
-    const { data: gameState } = await supabase
+    let { data: gameState } = await supabase
       .from("game_state")
       .select("*")
       .eq("room_id", roomId)
       .maybeSingle();
+
+    // Auto-deal the next hand a few seconds after a hand completes, so the
+    // table advances on its own without anyone clicking "Start hand". Only
+    // the room creator's poll triggers it (matching "only the room owner can
+    // start the hand"), and only after the summary has been on screen for
+    // AUTO_NEXT_HAND_MS. Driven from the poll (not a client setTimeout) so it
+    // still fires even if the creator's tab was backgrounded. Best-effort: if
+    // it races or there aren't enough active players, it's safely ignored and
+    // the creator can still start manually.
+    if (
+      gameState?.phase === "hand_complete" &&
+      room.created_by === user.id &&
+      gameState.updated_at &&
+      Date.now() - new Date(gameState.updated_at).getTime() >= AUTO_NEXT_HAND_MS
+    ) {
+      // Atomically "claim" the right to deal the next hand by flipping the
+      // phase off "hand_complete" with a conditional update. Postgres
+      // serializes the row update, so if two of the creator's polls race,
+      // exactly one claim returns a row and proceeds; the other sees no row
+      // and skips, preventing a double-deal.
+      const { data: claimed } = await supabase
+        .from("game_state")
+        .update({ phase: "ante" })
+        .eq("room_id", roomId)
+        .eq("phase", "hand_complete")
+        .eq("updated_at", gameState.updated_at)
+        .select("id")
+        .maybeSingle();
+
+      if (claimed) {
+        try {
+          await startNewHand(supabase, roomId);
+        } catch {
+          // Not enough active players (e.g. someone went away); roll the
+          // phase back so the creator can start manually.
+          await supabase
+            .from("game_state")
+            .update({ phase: "hand_complete" })
+            .eq("room_id", roomId)
+            .eq("phase", "ante");
+        }
+        const { data: refreshed } = await supabase
+          .from("game_state")
+          .select("*")
+          .eq("room_id", roomId)
+          .maybeSingle();
+        gameState = refreshed;
+      }
+    }
 
     let handPlayers: unknown[] = [];
     let myHoleCards: unknown = null;
@@ -92,6 +146,7 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
           act_deadline: gameState.act_deadline,
           awaiting_run_it_twice: gameState.awaiting_run_it_twice,
           community_cards_2: gameState.community_cards_2,
+          showdown_result: gameState.showdown_result ?? null,
           hand_id: gameState.hand_id,
         }
       : null;
