@@ -1,5 +1,15 @@
-"""Core Playwright scraping logic for Yahoo Finance earnings call transcripts."""
+"""Core Playwright scraping logic for Yahoo Finance earnings call transcripts.
+
+Transcripts are not reachable via plain anchor links on the quote page; Yahoo
+renders the quote/article pages via SvelteKit and embeds the API responses it
+fetched server-side as JSON inside <script type="application/json"
+data-sveltekit-fetched data-url="..."> tags. We piggyback on that: load the
+quote page once to harvest a crumb token, then call the same internal APIs
+the page itself used (quote -> quartrId, quoteSummary -> transcript list,
+/xhr/transcript -> full speaker-attributed transcript text).
+"""
 import datetime
+import json
 import logging
 import os
 import re
@@ -9,29 +19,12 @@ from playwright.sync_api import sync_playwright
 from . import robots
 from .index_store import IndexStore
 from .supabase_client import upsert_transcript
-from .utils import (
-    clean_text,
-    parse_quarter_year,
-    rate_limit_sleep,
-    retry_with_backoff,
-    transcript_filename,
-)
+from .utils import clean_text, rate_limit_sleep, retry_with_backoff, transcript_filename
 
 logger = logging.getLogger("yahoo_scraper")
 
 YAHOO_BASE = "https://finance.yahoo.com/quote/{ticker}"
-TRANSCRIPT_TITLE_RE = re.compile(
-    r"\b[A-Z.\-]{1,10}\s+Q[1-4]\s*(?:FY)?\s*\d{2,4}\s+earnings\s+call\s+transcript\b",
-    re.IGNORECASE,
-)
-
-COOKIE_BUTTON_SELECTORS = [
-    "button[name='agree']",
-    "button:has-text('Accept all')",
-    "button:has-text('Accept')",
-    "button:has-text('I agree')",
-    "form[action*='consent'] button",
-]
+CRUMB_RE = re.compile(r"crumb=([A-Za-z0-9_\-%]+)")
 
 
 class Stats:
@@ -58,76 +51,92 @@ class Stats:
         )
 
 
-def _dismiss_consent(page):
-    for selector in COOKIE_BUTTON_SELECTORS:
-        try:
-            locator = page.locator(selector)
-            if locator.count() > 0:
-                locator.first.click(timeout=3000)
-                page.wait_for_timeout(500)
-                return
-        except Exception:
+def _extract_crumb(html: str):
+    match = CRUMB_RE.search(html)
+    return match.group(1) if match else None
+
+
+def _api_get(browser_context, url):
+    """GET `url` through the browser context (shares cookies/session) and parse JSON."""
+    resp = browser_context.request.get(url)
+    if not resp.ok:
+        raise RuntimeError(f"HTTP {resp.status} for {url}")
+    return resp.json()
+
+
+def _get_quartr_id(browser_context, ticker, crumb):
+    url = (
+        f"https://query1.finance.yahoo.com/v7/finance/quote"
+        f"?symbols={ticker}&crumb={crumb}"
+    )
+    if not robots.is_allowed(url):
+        raise RuntimeError(f"robots.txt disallows {url}")
+    data = _api_get(browser_context, url)
+    results = data.get("quoteResponse", {}).get("result", [])
+    if not results:
+        raise RuntimeError(f"No quote result for {ticker}")
+    quartr_id = results[0].get("quartrId")
+    if not quartr_id:
+        raise RuntimeError(f"No quartrId for {ticker}")
+    return quartr_id
+
+
+def _get_transcript_list(browser_context, ticker, crumb):
+    url = (
+        f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}"
+        f"?modules=earningsCallTranscripts&crumb={crumb}"
+    )
+    if not robots.is_allowed(url):
+        raise RuntimeError(f"robots.txt disallows {url}")
+    data = _api_get(browser_context, url)
+    results = data.get("quoteSummary", {}).get("result", [])
+    if not results:
+        return []
+    module = results[0].get("earningsCallTranscripts", {})
+    return module.get("transcripts", [])
+
+
+def _get_transcript_content(browser_context, quartr_id, event_id, crumb):
+    url = (
+        f"https://finance.yahoo.com/xhr/transcript"
+        f"?eventType=earnings_call&quartrId={quartr_id}&eventId={event_id}&crumb={crumb}"
+    )
+    if not robots.is_allowed(url):
+        raise RuntimeError(f"robots.txt disallows {url}")
+    return _api_get(browser_context, url)
+
+
+def _build_transcript_text(transcript_content):
+    content = transcript_content.get("transcriptContent", {})
+    speaker_mapping = {
+        s.get("speaker"): s.get("speaker_data", {})
+        for s in content.get("speaker_mapping", [])
+    }
+    transcript = content.get("transcript", {})
+    paragraphs = transcript.get("paragraphs", [])
+
+    if not paragraphs:
+        return clean_text(transcript.get("text", ""))
+
+    lines = []
+    last_speaker = object()
+    for para in paragraphs:
+        speaker_id = para.get("speaker")
+        text = (para.get("text") or "").strip()
+        if not text:
             continue
+        if speaker_id != last_speaker:
+            speaker = speaker_mapping.get(speaker_id, {})
+            name = speaker.get("name") or "Unknown Speaker"
+            role = speaker.get("role")
+            company = speaker.get("company")
+            label_parts = [p for p in (role, company) if p]
+            label = f"{name} ({', '.join(label_parts)})" if label_parts else name
+            lines.append(f"\n{label}:")
+            last_speaker = speaker_id
+        lines.append(text)
 
-
-def _scroll_to_load(page, rounds=6):
-    for _ in range(rounds):
-        page.mouse.wheel(0, 2000)
-        page.wait_for_timeout(700)
-
-
-def _find_transcript_links(page, ticker):
-    anchors = page.locator("a").all()
-    found = {}
-    for a in anchors:
-        try:
-            title = (a.text_content() or "").strip()
-            href = a.get_attribute("href")
-        except Exception:
-            continue
-        if not title or not href:
-            continue
-        if "transcript" not in title.lower():
-            continue
-        if ticker.lower() not in title.lower() and ticker.upper() not in title:
-            continue
-        if not TRANSCRIPT_TITLE_RE.search(title):
-            continue
-        if href.startswith("/"):
-            href = "https://finance.yahoo.com" + href
-        found[href] = title
-    return found
-
-
-def _extract_publication_date(page):
-    try:
-        time_el = page.locator("time").first
-        if time_el.count() > 0:
-            return time_el.get_attribute("datetime") or time_el.text_content()
-    except Exception:
-        pass
-    return ""
-
-
-def _extract_article_text(page):
-    selectors = [
-        "div.caas-body",
-        "article",
-        "div[data-testid='article-content']",
-    ]
-    for sel in selectors:
-        try:
-            loc = page.locator(sel).first
-            if loc.count() > 0:
-                text = loc.inner_text()
-                if text and len(text) > 200:
-                    return text
-        except Exception:
-            continue
-    try:
-        return page.locator("body").inner_text()
-    except Exception:
-        return ""
+    return clean_text("\n".join(lines))
 
 
 def scrape_ticker(
@@ -154,119 +163,127 @@ def scrape_ticker(
             page.goto(url, timeout=30000, wait_until="domcontentloaded")
 
         retry_with_backoff(load, on_error=lambda a, e: None)
-        _dismiss_consent(page)
-        _scroll_to_load(page)
+        html = page.content()
+    finally:
+        page.close()
 
-        links = _find_transcript_links(page, ticker)
-        if not links:
-            logger.info("No transcript links found for %s", ticker)
-            page.close()
-            return
+    crumb = _extract_crumb(html)
+    if not crumb:
+        logger.warning("Could not extract crumb for %s; skipping ticker.", ticker)
+        stats.failures += 1
+        return
 
-        items = list(links.items())[:limit]
-        stats.transcripts_found += len(items)
+    try:
+        quartr_id = retry_with_backoff(
+            lambda: _get_quartr_id(browser_context, ticker, crumb),
+            on_error=lambda a, e: None,
+        )
+        transcripts = retry_with_backoff(
+            lambda: _get_transcript_list(browser_context, ticker, crumb),
+            on_error=lambda a, e: None,
+        )
+    except Exception as exc:
+        logger.warning("Could not fetch transcript list for %s: %s", ticker, exc)
+        stats.failures += 1
+        return
 
-        for href, title in items:
-            quarter, year = parse_quarter_year(title)
-            if not quarter or not year:
-                logger.warning("Could not parse quarter/year from title '%s'; skipping.", title)
-                stats.failures += 1
-                continue
+    if not transcripts:
+        logger.info("No transcripts found for %s", ticker)
+        return
 
-            if index_store.already_indexed(ticker, year, quarter):
-                logger.info("Skipping already-indexed %s %s %s (resume)", ticker, year, quarter)
-                stats.skipped += 1
-                continue
+    # Most recent first.
+    transcripts = sorted(transcripts, key=lambda t: t.get("date", 0), reverse=True)
+    items = transcripts[:limit]
+    stats.transcripts_found += len(items)
 
-            fname = transcript_filename(year, quarter)
-            text_path = os.path.join(out_dir, "transcripts", ticker, f"{fname}.txt")
-            html_path = os.path.join(out_dir, "raw_html", ticker, f"{fname}.html")
+    for entry in items:
+        title = entry.get("title", "")
+        quarter = entry.get("fiscalPeriod")
+        year = entry.get("fiscalYear")
+        href = entry.get("url", "")
+        event_id = entry.get("eventId")
+        pub_date = entry.get("date", "")
 
-            if resume and os.path.exists(text_path):
-                logger.info("Resume: local file exists for %s %s %s, skipping download.", ticker, year, quarter)
-                stats.skipped += 1
-                continue
+        if not quarter or not year or not event_id:
+            logger.warning("Incomplete transcript entry for %s: %s; skipping.", ticker, title)
+            stats.failures += 1
+            continue
 
-            if not robots.is_allowed(href):
-                logger.warning("robots.txt disallows article %s; marking unavailable.", href)
-                _record(
-                    index_store, stats, ticker, company_name, sector, quarter, year,
-                    title, href, "", "", "", "unavailable", "Disallowed by robots.txt",
-                )
-                continue
+        year = str(year)
 
-            rate_limit_sleep()
-            status, error, text, html, pub_date = _fetch_article(browser_context, href)
+        if index_store.already_indexed(ticker, year, quarter):
+            logger.info("Skipping already-indexed %s %s %s (resume)", ticker, year, quarter)
+            stats.skipped += 1
+            continue
 
-            if status != "ok":
-                stats.failures += 1
-                _record(
-                    index_store, stats, ticker, company_name, sector, quarter, year,
-                    title, href, pub_date, "", "", status, error,
-                )
-                continue
+        fname = transcript_filename(year, quarter)
+        text_path = os.path.join(out_dir, "transcripts", ticker, f"{fname}.txt")
+        html_path = os.path.join(out_dir, "raw_html", ticker, f"{fname}.html")
 
-            os.makedirs(os.path.dirname(text_path), exist_ok=True)
-            os.makedirs(os.path.dirname(html_path), exist_ok=True)
-            with open(text_path, "w", encoding="utf-8") as fh:
-                fh.write(text)
-            with open(html_path, "w", encoding="utf-8") as fh:
-                fh.write(html)
+        if resume and os.path.exists(text_path):
+            logger.info("Resume: local file exists for %s %s %s, skipping download.", ticker, year, quarter)
+            stats.skipped += 1
+            continue
 
-            stats.transcripts_downloaded += 1
-            scrape_ts = datetime.datetime.utcnow().isoformat()
-
-            record = {
-                "ticker": ticker,
-                "company_name": company_name,
-                "fiscal_quarter": quarter,
-                "fiscal_year": year,
-                "article_title": title,
-                "article_url": href,
-                "publication_date": pub_date,
-                "transcript_text": text,
-                "scrape_timestamp": scrape_ts,
-            }
-            ok = upsert_transcript(record)
-            if ok:
-                stats.supabase_succeeded += 1
-            else:
-                stats.supabase_failed += 1
-
+        rate_limit_sleep()
+        try:
+            transcript_content = retry_with_backoff(
+                lambda: _get_transcript_content(browser_context, quartr_id, event_id, crumb),
+                on_error=lambda a, e: None,
+            )
+            text = _build_transcript_text(transcript_content)
+            raw_json = json.dumps(transcript_content, indent=2)
+        except Exception as exc:
+            logger.error("Failed to fetch transcript for %s %s %s: %s", ticker, year, quarter, exc)
+            stats.failures += 1
             _record(
                 index_store, stats, ticker, company_name, sector, quarter, year,
-                title, href, pub_date, text_path, html_path, "downloaded",
-                "" if ok else "supabase_upsert_failed",
-                supabase_status="success" if ok else "failed",
-                scrape_timestamp=scrape_ts,
+                title, href, pub_date, "", "", "failed", str(exc),
             )
-    finally:
-        page.close()
-
-
-def _fetch_article(browser_context, href):
-    page = browser_context.new_page()
-    try:
-        def load():
-            page.goto(href, timeout=30000, wait_until="domcontentloaded")
-
-        retry_with_backoff(load, on_error=lambda a, e: None)
-        _dismiss_consent(page)
-        _scroll_to_load(page, rounds=3)
-
-        html = page.content()
-        text = clean_text(_extract_article_text(page))
-        pub_date = _extract_publication_date(page)
+            continue
 
         if not text or len(text) < 200:
-            return "unavailable", "Transcript content not accessible (possible paywall/auth)", "", html, pub_date
+            stats.failures += 1
+            _record(
+                index_store, stats, ticker, company_name, sector, quarter, year,
+                title, href, pub_date, "", "", "unavailable", "Transcript content not accessible",
+            )
+            continue
 
-        return "ok", "", text, html, pub_date
-    except Exception as exc:
-        logger.error("Failed to fetch article %s: %s", href, exc)
-        return "failed", str(exc), "", "", ""
-    finally:
-        page.close()
+        os.makedirs(os.path.dirname(text_path), exist_ok=True)
+        os.makedirs(os.path.dirname(html_path), exist_ok=True)
+        with open(text_path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        with open(html_path, "w", encoding="utf-8") as fh:
+            fh.write(raw_json)
+
+        stats.transcripts_downloaded += 1
+        scrape_ts = datetime.datetime.utcnow().isoformat()
+
+        record = {
+            "ticker": ticker,
+            "company_name": company_name,
+            "fiscal_quarter": quarter,
+            "fiscal_year": year,
+            "article_title": title,
+            "article_url": href,
+            "publication_date": pub_date,
+            "transcript_text": text,
+            "scrape_timestamp": scrape_ts,
+        }
+        ok = upsert_transcript(record)
+        if ok:
+            stats.supabase_succeeded += 1
+        else:
+            stats.supabase_failed += 1
+
+        _record(
+            index_store, stats, ticker, company_name, sector, quarter, year,
+            title, href, pub_date, text_path, html_path, "downloaded",
+            "" if ok else "supabase_upsert_failed",
+            supabase_status="success" if ok else "failed",
+            scrape_timestamp=scrape_ts,
+        )
 
 
 def _record(
