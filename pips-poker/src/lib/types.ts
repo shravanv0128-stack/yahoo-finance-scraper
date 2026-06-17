@@ -61,7 +61,11 @@ export interface HandPlayerPublic {
   has_swapped: boolean; // whether the player has used their one draw_swap opportunity
   revealed_cards: Card[] | null; // populated at showdown only
   revealed_pip_total: number | null;
+  mucked: boolean;
+  has_decided_show: boolean;
 }
+
+export type ShowDecision = "show" | "muck";
 
 export interface HoleCardsRow {
   id: string;
@@ -97,6 +101,8 @@ export interface GameStateRow {
   act_deadline: string | null; // ISO timestamp; active_seat must act by this time or is auto-folded/checked
   awaiting_run_it_twice: boolean; // true once all remaining contenders are all-in and a run-twice decision is pending
   community_cards_2: Card[] | null; // second board, only populated when run-it-twice was chosen
+  last_aggressor_seat: number | null; // last bettor/raiser in the current betting round, reset each new round
+  awaiting_show_decision: boolean; // true during the "showdown" phase while contenders take turns choosing show/muck
   updated_at: string;
 }
 

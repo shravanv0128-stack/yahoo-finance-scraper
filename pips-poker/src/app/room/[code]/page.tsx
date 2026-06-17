@@ -15,9 +15,10 @@ import { DrawSwapControls } from "@/components/DrawSwapControls";
 import { ShowdownSummary } from "@/components/ShowdownSummary";
 import { LedgerPanel } from "@/components/LedgerPanel";
 import { RunItTwicePrompt } from "@/components/RunItTwicePrompt";
+import { ShowMuckPrompt } from "@/components/ShowMuckPrompt";
 import { ActionTimer } from "@/components/ActionTimer";
 import { CommunityBoard } from "@/components/CommunityBoard";
-import type { BettingAction } from "@/lib/types";
+import type { BettingAction, ShowDecision } from "@/lib/types";
 
 const BETTING_PHASES = new Set(["flop_betting", "turn_betting", "river_betting"]);
 
@@ -153,6 +154,19 @@ export default function RoomPage() {
     }
   }
 
+  async function handleShowDecision(decision: ShowDecision) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/hands/show`, { roomId, decision });
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to submit show/muck decision");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleLedgerAdjust(playerId: string, delta: number) {
     setActionError(null);
     setBusy(true);
@@ -228,6 +242,9 @@ export default function RoomPage() {
   const isSwapPhase = gameState?.phase === "draw_swap";
   const toCall = myHandPlayer ? Math.max(0, (gameState?.current_bet ?? 0) - myHandPlayer.current_bet) : 0;
   const isRunTwicePending = gameState?.awaiting_run_it_twice ?? false;
+  const isShowDecisionPending = gameState?.phase === "showdown" && (gameState?.awaiting_show_decision ?? false);
+  const isMyShowTurn =
+    isShowDecisionPending && myPlayer != null && gameState?.active_seat === myPlayer.seat && myHandPlayer?.status !== "folded";
   const isCreator = !!myUserId && room.created_by === myUserId;
   const amInLiveHand = isHandLive && myHandPlayer && myHandPlayer.status !== "folded";
   const canStartHand = !isHandLive || gameState?.phase === "hand_complete";
@@ -343,6 +360,14 @@ export default function RoomPage() {
         <RunItTwicePrompt disabled={busy} onChoose={handleRunTwice} />
       )}
 
+      {isMyShowTurn && (
+        <ShowMuckPrompt
+          isFirstToAct={gameState?.last_aggressor_seat === myPlayer?.seat}
+          disabled={busy}
+          onChoose={handleShowDecision}
+        />
+      )}
+
       {gameState?.phase === "hand_complete" && (
         <ShowdownSummary
           players={handPlayers.map((hp) => ({
@@ -353,6 +378,7 @@ export default function RoomPage() {
             revealedPipTotal: hp.revealed_pip_total,
             folded: hp.status === "folded",
             amountWon: hp.amount_won,
+            mucked: hp.mucked,
           }))}
         />
       )}

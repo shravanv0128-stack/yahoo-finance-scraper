@@ -10,7 +10,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { freshShuffledDeck, drawCards, drawReplacements } from "./deck";
-import { Card, GamePhase, BettingAction, ShowdownPlayerResult } from "./types";
+import { Card, GamePhase, BettingAction, ShowdownPlayerResult, ShowDecision } from "./types";
 import { nextPhase } from "./gamePhases";
 import {
   BettingPlayerState,
@@ -44,6 +44,8 @@ interface HandPlayerRow {
   has_swapped: boolean;
   revealed_cards: Card[] | null;
   revealed_pip_total: number | null;
+  mucked: boolean;
+  has_decided_show: boolean;
 }
 
 /**
@@ -188,6 +190,28 @@ function toBettingState(handPlayers: HandPlayerRow[], pot: number, currentBet: n
 }
 
 /**
+ * Computes the order in which contenders must decide to show or muck at a
+ * contested showdown: the last aggressor (bettor/raiser) of the final
+ * betting round goes first if there was one, otherwise seat order starting
+ * from the lowest seat number (approximating "first active player left of
+ * the dealer/button" without tracking exact button position per seat).
+ * Action then proceeds around the table in ascending seat order.
+ */
+function computeShowOrder<T extends { seat: number }>(
+  contenders: T[],
+  lastAggressorSeat: number | null
+): number[] {
+  const seats = contenders.map((p) => p.seat).sort((a, b) => a - b);
+  if (seats.length === 0) return [];
+  let startIdx = 0;
+  if (lastAggressorSeat !== null) {
+    const idx = seats.indexOf(lastAggressorSeat);
+    if (idx !== -1) startIdx = idx;
+  }
+  return seats.map((_, i) => seats[(startIdx + i) % seats.length]);
+}
+
+/**
  * Apply a single betting action (check/call/bet/raise/fold/all_in) for a
  * player during a betting phase. Persists the new state, logs the action,
  * and advances the phase automatically if the betting round has closed.
@@ -263,17 +287,26 @@ export async function applyBettingAction(
   const roundComplete = isBettingRoundComplete(result.state);
   const contenders = result.state.players.filter((p) => p.status !== "folded");
 
+  // Track who made the last bet/raise this betting round, so that if the
+  // round reaches a contested river showdown, that player is required to
+  // show their cards first (standard "last aggressor shows first" rule).
+  const actorSeat = (handPlayers as HandPlayerRow[]).find((p) => p.id === handPlayerId)?.seat ?? null;
+  let lastAggressorSeat: number | null =
+    result.state.currentBet > bettingState.currentBet ? actorSeat : gameState.last_aggressor_seat;
+
   let newPhase: GamePhase = gameState.phase;
   let newCommunityCards: Card[] = gameState.community_cards;
   let newDeck: Card[] = gameState.deck;
   let nextActiveSeat: number | null = gameState.active_seat;
   let awaitingRunItTwice = false;
+  let awaitingShowDecision = false;
 
   if (roundComplete) {
     const activePlayers = result.state.players.filter((p) => p.status === "active");
 
     if (contenders.length <= 1) {
-      // Everyone else folded - skip straight to showdown logic (single winner).
+      // Everyone else folded - skip straight to showdown logic (single winner,
+      // no show/muck decision needed since nobody else can contest the pot).
       newPhase = "showdown";
     } else if (activePlayers.length <= 1 && gameState.phase !== "river_betting") {
       // Every remaining contender (other than at most one) is all-in with at
@@ -282,11 +315,14 @@ export async function applyBettingAction(
       newPhase = "all_in_runout";
       awaitingRunItTwice = true;
     } else if (gameState.phase === "river_betting") {
-      // River betting just finished with everyone still able to act (no
-      // all-in pause needed) - go straight to showdown, skipping the
-      // "all_in_runout" PHASE_ORDER entry, which only applies when an
-      // earlier all-in forces a pause before a street is still to be dealt.
+      // River betting just finished with multiple contenders still able to
+      // act - go to a contested showdown, skipping the "all_in_runout"
+      // PHASE_ORDER entry, which only applies when an earlier all-in forces
+      // a pause before a street is still to be dealt. A show/muck decision
+      // queue starts: the last aggressor (or first contender in seat order
+      // if the river was checked through) must act first.
       newPhase = "showdown";
+      awaitingShowDecision = true;
     } else {
       newPhase = nextPhase(gameState.phase); // e.g. flop_betting -> draw_swap
       if (newPhase === "turn") {
@@ -300,6 +336,9 @@ export async function applyBettingAction(
         newDeck = remaining;
         newPhase = nextPhase(newPhase); // river -> river_betting
       }
+      // A new betting street starts fresh - the previous street's aggressor
+      // no longer applies.
+      lastAggressorSeat = null;
       // Reset per-round betting fields for the next round (skip if heading into draw_swap,
       // since draw_swap has its own has_swapped tracking, not has_acted_this_round).
       const resetPlayers = resetForNewRound(result.state.players);
@@ -310,11 +349,16 @@ export async function applyBettingAction(
           .eq("id", p.hand_player_id);
       }
     }
-    nextActiveSeat = newPhase === "all_in_runout" || newPhase === "showdown"
-      ? null
-      : activePlayers.length > 0
-        ? activePlayers[0].seat
-        : null;
+    if (awaitingShowDecision) {
+      const order = computeShowOrder(contenders, lastAggressorSeat);
+      nextActiveSeat = order.length > 0 ? order[0] : null;
+    } else {
+      nextActiveSeat = newPhase === "all_in_runout" || newPhase === "showdown"
+        ? null
+        : activePlayers.length > 0
+          ? activePlayers[0].seat
+          : null;
+    }
   } else {
     // Advance active_seat to the next contender in seat order who can still act.
     const ordered = result.state.players.slice().sort((a, b) => a.seat - b.seat);
@@ -340,13 +384,15 @@ export async function applyBettingAction(
       active_seat: nextActiveSeat,
       act_deadline: nextActiveSeat !== null ? newActDeadline() : null,
       awaiting_run_it_twice: awaitingRunItTwice,
+      awaiting_show_decision: awaitingShowDecision,
+      last_aggressor_seat: lastAggressorSeat,
       updated_at: new Date().toISOString(),
     })
     .eq("room_id", roomId);
 
   await supabase.from("hands").update({ phase: newPhase, pot: result.state.pot }).eq("id", handId);
 
-  if (newPhase === "showdown") {
+  if (newPhase === "showdown" && !awaitingShowDecision) {
     await runShowdown(supabase, roomId, handId);
   }
 
@@ -593,7 +639,15 @@ export async function runShowdown(
     .order("seat", { ascending: true });
   if (hpError) throw hpError;
 
-  const contenders = (handPlayers as HandPlayerRow[]).filter((p) => p.status !== "folded");
+  // Mucked hands forfeit the pot (they chose not to show rather than be
+  // beaten) and are excluded from contention here, even though they're
+  // still "eligible" for side-pot chip math in buildSidePots below. Fall
+  // back to including everyone if somehow every non-folded player mucked,
+  // so the pot is never left unawarded.
+  let contenders = (handPlayers as HandPlayerRow[]).filter((p) => p.status !== "folded" && !p.mucked);
+  if (contenders.length === 0) {
+    contenders = (handPlayers as HandPlayerRow[]).filter((p) => p.status !== "folded");
+  }
   // boards.length === 2 means "run it twice" was chosen; otherwise a single
   // board (either the normal showdown, or a single confirmed run-out).
   const resolvedBoards: Card[][] = boards && boards.length > 0 ? boards : [gameState.community_cards as Card[]];
@@ -717,6 +771,81 @@ export async function runShowdown(
     .eq("id", handId);
 
   return showdownResults;
+}
+
+/**
+ * Apply one player's show/muck decision during a contested showdown.
+ * Advances active_seat to the next undecided contender (per the order
+ * computed when the decision queue was started), or - once everyone has
+ * decided - clears awaiting_show_decision and runs the actual showdown
+ * (which only awards the pot to contenders who chose to show).
+ */
+export async function applyShowDecision(
+  supabase: SupabaseClient,
+  roomId: string,
+  handId: string,
+  handPlayerId: string,
+  decision: ShowDecision
+) {
+  const { data: gameState, error: gsError } = await supabase
+    .from("game_state")
+    .select("*")
+    .eq("room_id", roomId)
+    .single();
+  if (gsError) throw gsError;
+  if (gameState.phase !== "showdown" || !gameState.awaiting_show_decision) {
+    throw new Error("No show/muck decision is pending for this room");
+  }
+
+  const { data: handPlayers, error: hpError } = await supabase
+    .from("hand_players")
+    .select("*")
+    .eq("hand_id", handId)
+    .order("seat", { ascending: true });
+  if (hpError) throw hpError;
+
+  const players = handPlayers as HandPlayerRow[];
+  const actor = players.find((p) => p.id === handPlayerId);
+  if (!actor) throw new Error("Player not found in this hand");
+  if (actor.seat !== gameState.active_seat) {
+    throw new Error("It is not your turn to show or muck");
+  }
+  if (actor.status === "folded") {
+    throw new Error("Folded players cannot show or muck");
+  }
+
+  await supabase
+    .from("hand_players")
+    .update({ has_decided_show: true, mucked: decision === "muck" })
+    .eq("id", handPlayerId);
+
+  const contenders = players.filter((p) => p.status !== "folded");
+  const order = computeShowOrder(contenders, gameState.last_aggressor_seat);
+  const decidedSeats = new Set(
+    players.filter((p) => p.has_decided_show || p.id === handPlayerId).map((p) => p.seat)
+  );
+  const nextSeat = order.find((seat) => !decidedSeats.has(seat)) ?? null;
+
+  if (nextSeat !== null) {
+    await supabase
+      .from("game_state")
+      .update({ active_seat: nextSeat, act_deadline: newActDeadline(), updated_at: new Date().toISOString() })
+      .eq("room_id", roomId);
+    return { phase: "showdown" as GamePhase, pot: gameState.pot };
+  }
+
+  await supabase
+    .from("game_state")
+    .update({
+      awaiting_show_decision: false,
+      active_seat: null,
+      act_deadline: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("room_id", roomId);
+
+  await runShowdown(supabase, roomId, handId);
+  return { phase: "hand_complete" as GamePhase, pot: 0 };
 }
 
 /**

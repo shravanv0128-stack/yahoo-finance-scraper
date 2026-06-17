@@ -41,6 +41,8 @@ export interface RoomHandPlayer {
   revealed_cards: Card[] | null;
   revealed_pip_total: number | null;
   amount_won: number;
+  mucked: boolean;
+  has_decided_show: boolean;
 }
 
 export interface RoomGameState {
@@ -55,6 +57,8 @@ export interface RoomGameState {
   awaiting_run_it_twice: boolean;
   community_cards_2: Card[] | null;
   hand_id: string | null;
+  last_aggressor_seat: number | null;
+  awaiting_show_decision: boolean;
 }
 
 export interface RoomStateResponse {

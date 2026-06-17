@@ -74,10 +74,14 @@ create table if not exists hand_players (
   revealed_cards jsonb,
   revealed_pip_total integer,
   amount_won numeric(10,2) not null default 0,
+  mucked boolean not null default false,
+  has_decided_show boolean not null default false,
   unique (hand_id, player_id)
 );
--- Run this once against an existing database to add showdown win tracking:
+-- Run this once against an existing database to add showdown win/show-muck tracking:
 -- alter table hand_players add column if not exists amount_won numeric(10,2) not null default 0;
+-- alter table hand_players add column if not exists mucked boolean not null default false;
+-- alter table hand_players add column if not exists has_decided_show boolean not null default false;
 
 -- Each player's 3 hole cards for a hand. Only readable by that user (or the
 -- server via the service-role key) until showdown copies them into
@@ -108,8 +112,13 @@ create table if not exists game_state (
   act_deadline timestamptz,
   awaiting_run_it_twice boolean not null default false,
   community_cards_2 jsonb,
+  last_aggressor_seat integer,
+  awaiting_show_decision boolean not null default false,
   updated_at timestamptz not null default now()
 );
+-- Run this once against an existing database to add show/muck tracking:
+-- alter table game_state add column if not exists last_aggressor_seat integer;
+-- alter table game_state add column if not exists awaiting_show_decision boolean not null default false;
 
 -- Append-only betting/action log for replay and audit.
 create table if not exists actions (

@@ -17,11 +17,13 @@ export interface ShowdownPlayerSummary {
   revealedPipTotal: number | null;
   folded: boolean;
   amountWon: number;
+  mucked: boolean;
 }
 
 export function ShowdownSummary({ players }: { players: ShowdownPlayerSummary[] }) {
   const shown = players.filter((p) => !p.folded && p.revealedCards);
-  if (shown.length === 0) return null;
+  const mucked = players.filter((p) => !p.folded && !p.revealedCards && p.mucked);
+  if (shown.length === 0 && mucked.length === 0) return null;
 
   const winners = shown.filter((p) => p.amountWon > 0);
   const winnerLabel =
@@ -62,6 +64,18 @@ export function ShowdownSummary({ players }: { players: ShowdownPlayerSummary[] 
                 <Card key={i} card={c} size="sm" />
               ))}
             </div>
+          </div>
+        ))}
+        {mucked.map((p) => (
+          <div
+            key={p.seat}
+            className="flex items-center justify-between rounded-md bg-felt-dark/60 px-3 py-2"
+          >
+            <div>
+              <p className="text-sm font-semibold text-white">{p.displayName}</p>
+              <p className="text-xs text-felt-light/70">Stack: ${p.chipStack}</p>
+            </div>
+            <p className="text-xs italic text-felt-light/70">Mucked</p>
           </div>
         ))}
       </div>
