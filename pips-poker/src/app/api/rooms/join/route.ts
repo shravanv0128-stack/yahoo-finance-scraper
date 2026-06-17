@@ -1,10 +1,15 @@
-// POST /api/rooms/join - seat the calling user at a room identified by its
-// shareable join code (or returns their existing seat if already joined).
+// POST /api/rooms/join - seat the calling user at a room identified by
+// either its shareable join code (from the home page's code-entry flow) or
+// its room id (from the table page, when a user is already looking at
+// /room/:roomId and needs to take a seat). Whichever the caller has on hand,
+// pass it as `code` - it's matched against rooms.code case-insensitively
+// first, then against rooms.id, so both flows can share one endpoint.
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";
 
 const MAX_SEATS = 8;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,11 +28,10 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceRoleClient();
 
-    const { data: room, error: roomError } = await supabase
-      .from("rooms")
-      .select("*")
-      .eq("code", code.toUpperCase())
-      .single();
+    const lookupQuery = UUID_RE.test(code)
+      ? supabase.from("rooms").select("*").eq("id", code)
+      : supabase.from("rooms").select("*").eq("code", code.toUpperCase());
+    const { data: room, error: roomError } = await lookupQuery.single();
     if (roomError || !room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }

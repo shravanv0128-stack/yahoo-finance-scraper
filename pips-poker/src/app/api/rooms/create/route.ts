@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
         code: generateRoomCode(),
         name: name ?? "Pips Poker Table",
         created_by: user.id,
-        ante_amount: 5,
-        small_bet: 10,
+        ante_amount: 0.5,
+        small_bet: 1,
       })
       .select()
       .single();
