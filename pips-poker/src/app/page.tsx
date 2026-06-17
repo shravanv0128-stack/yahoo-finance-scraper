@@ -1,25 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ensureSession } from "@/lib/supabaseClient";
+import { supabase, getSession, signInWithGoogle, signOut } from "@/lib/supabaseClient";
+import type { Session } from "@supabase/supabase-js";
 
 export default function HomePage() {
   const router = useRouter();
+  const [session, setSession] = useState<Session | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [name, setName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    getSession().then((s) => {
+      setSession(s);
+      setSessionLoaded(true);
+      if (s?.user) {
+        setDisplayName((current) => current || s.user.user_metadata?.full_name || s.user.email || "");
+      }
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s?.user) {
+        setDisplayName((current) => current || s.user.user_metadata?.full_name || s.user.email || "");
+      }
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
   async function authedFetch(url: string, body: unknown) {
-    const session = await ensureSession();
     const token = session?.access_token;
+    if (!token) throw new Error("Sign in with Google first");
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
     });
@@ -71,47 +91,65 @@ export default function HomePage() {
         <p className="rounded bg-chip-red/20 px-4 py-2 text-sm text-chip-red">{error}</p>
       )}
 
-      <div className="w-full max-w-sm rounded-lg border border-felt-light bg-felt p-6 shadow-table">
-        <label className="mb-1 block text-xs uppercase tracking-wide text-felt-light">
-          Your display name
-        </label>
-        <input
-          className="mb-4 w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="e.g. Ada"
-        />
-
-        <h2 className="mb-2 text-sm font-semibold text-white">Create a room</h2>
-        <input
-          className="mb-2 w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Table name"
-        />
+      {sessionLoaded && !session && (
         <button
-          onClick={createRoom}
-          disabled={busy || !displayName}
-          className="mb-6 w-full rounded bg-chip-gold px-3 py-2 text-sm font-semibold text-felt-dark disabled:opacity-50"
+          onClick={() => signInWithGoogle()}
+          className="rounded bg-white px-6 py-3 text-sm font-semibold text-felt-dark shadow"
         >
-          Create room
+          Sign in with Google
         </button>
+      )}
 
-        <h2 className="mb-2 text-sm font-semibold text-white">Join a room</h2>
-        <input
-          className="mb-2 w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
-          value={joinCode}
-          onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-          placeholder="Room code, e.g. ABCD12"
-        />
-        <button
-          onClick={joinRoom}
-          disabled={busy || !displayName || !joinCode}
-          className="w-full rounded bg-chip-blue px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-        >
-          Join room
-        </button>
-      </div>
+      {session && (
+        <div className="w-full max-w-sm rounded-lg border border-felt-light bg-felt p-6 shadow-table">
+          <div className="mb-4 flex items-center justify-between text-xs text-felt-light">
+            <span>Signed in as {session.user.email}</span>
+            <button onClick={() => signOut()} className="underline">
+              Sign out
+            </button>
+          </div>
+
+          <label className="mb-1 block text-xs uppercase tracking-wide text-felt-light">
+            Your display name
+          </label>
+          <input
+            className="mb-4 w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="e.g. Ada"
+          />
+
+          <h2 className="mb-2 text-sm font-semibold text-white">Create a room</h2>
+          <input
+            className="mb-2 w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Table name"
+          />
+          <button
+            onClick={createRoom}
+            disabled={busy || !displayName}
+            className="mb-6 w-full rounded bg-chip-gold px-3 py-2 text-sm font-semibold text-felt-dark disabled:opacity-50"
+          >
+            Create room
+          </button>
+
+          <h2 className="mb-2 text-sm font-semibold text-white">Join a room</h2>
+          <input
+            className="mb-2 w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+            value={joinCode}
+            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+            placeholder="Room code, e.g. ABCD12"
+          />
+          <button
+            onClick={joinRoom}
+            disabled={busy || !displayName || !joinCode}
+            className="w-full rounded bg-chip-blue px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            Join room
+          </button>
+        </div>
+      )}
     </main>
   );
 }

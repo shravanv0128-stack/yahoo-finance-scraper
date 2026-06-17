@@ -15,15 +15,23 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// The app has no signup/login flow (it's a private, link-shared game), so
-// every browser gets an anonymous Supabase auth session on first load.
-// Requires "Anonymous sign-ins" enabled in Supabase (Authentication ->
-// Sign In / Providers). The resulting session's access token is what
-// satisfies getUserFromRequest() in src/lib/auth.ts on the API side.
-export async function ensureSession() {
+// Players sign in with Google (no separate signup flow). The resulting
+// session's access token is what satisfies getUserFromRequest() in
+// src/lib/auth.ts on the API side, so callers must check for a session
+// before hitting any /api/** route and prompt sign-in if there isn't one.
+export async function getSession() {
   const { data } = await supabase.auth.getSession();
-  if (data.session) return data.session;
-  const { data: signInData, error } = await supabase.auth.signInAnonymously();
+  return data.session;
+}
+
+export async function signInWithGoogle() {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: window.location.href },
+  });
   if (error) throw error;
-  return signInData.session;
+}
+
+export async function signOut() {
+  await supabase.auth.signOut();
 }

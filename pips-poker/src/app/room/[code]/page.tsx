@@ -4,9 +4,10 @@
 // page links to (room.id is passed as this segment); it is treated purely
 // as the room identifier for /api/rooms/:roomId/* calls.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ensureSession } from "@/lib/supabaseClient";
+import { supabase, getSession, signInWithGoogle } from "@/lib/supabaseClient";
+import type { Session } from "@supabase/supabase-js";
 import { useRoomRealtime } from "@/hooks/useRoomRealtime";
 import { Table, type TableSeatData } from "@/components/Table";
 import { BettingControls } from "@/components/BettingControls";
@@ -23,10 +24,29 @@ export default function RoomPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [session, setSession] = useState<Session | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+
+  useEffect(() => {
+    getSession().then((s) => {
+      setSession(s);
+      setSessionLoaded(true);
+      if (s?.user) {
+        setDisplayName((current) => current || s.user.user_metadata?.full_name || s.user.email || "");
+      }
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s?.user) {
+        setDisplayName((current) => current || s.user.user_metadata?.full_name || s.user.email || "");
+      }
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   async function authedFetch(url: string, body: unknown) {
-    const session = await ensureSession();
     const token = session?.access_token;
+    if (!token) throw new Error("Sign in with Google first");
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -166,7 +186,18 @@ export default function RoomPage() {
         <p className="mx-auto mt-2 rounded bg-chip-red/20 px-4 py-1 text-sm text-chip-red">{actionError}</p>
       )}
 
-      {!amSeated && (
+      {!amSeated && sessionLoaded && !session && (
+        <div className="mx-auto mt-6 flex w-full max-w-sm flex-col items-center gap-2 rounded-lg border border-felt-light bg-felt p-4">
+          <button
+            onClick={() => signInWithGoogle()}
+            className="rounded bg-white px-6 py-3 text-sm font-semibold text-felt-dark shadow"
+          >
+            Sign in with Google
+          </button>
+        </div>
+      )}
+
+      {!amSeated && session && (
         <div className="mx-auto mt-6 flex w-full max-w-sm flex-col gap-2 rounded-lg border border-felt-light bg-felt p-4">
           <label className="text-xs uppercase tracking-wide text-felt-light">Your display name</label>
           <input
