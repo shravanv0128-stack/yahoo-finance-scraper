@@ -28,7 +28,7 @@ export function Card({
 }) {
   const dims = SIZE_CLASSES[size];
   const highlightClasses = highlight
-    ? "ring-2 ring-amber-300 shadow-[0_0_14px_4px_rgba(251,191,36,0.85)] animate-pulse"
+    ? "ring-1 ring-amber-300/70 shadow-[0_0_8px_2px_rgba(251,191,36,0.35)]"
     : "";
 
   if (faceDown || !card) {

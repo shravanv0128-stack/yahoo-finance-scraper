@@ -62,12 +62,12 @@ export function PlayerSeat({
 
   return (
     <div
-      className={`flex flex-col items-center gap-1 rounded-2xl transition-all ${
+      className={`flex flex-col items-center gap-1 rounded-2xl transition-all duration-300 ${
         folded || busted ? "opacity-40" : ""
-      } ${isActingSeat ? "scale-110 bg-amber-400/10 p-2 ring-2 ring-amber-300/70" : "p-2"}`}
+      } ${isActingSeat ? "bg-amber-400/5 p-2 ring-1 ring-amber-300/40" : "p-2"}`}
     >
       {isActingSeat && (
-        <div className="rounded-full bg-amber-400 px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-felt-dark shadow-[0_0_10px_3px_rgba(251,191,36,0.8)] animate-bounce">
+        <div className="rounded-full border border-amber-300/60 bg-black/70 px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300 shadow-[0_0_8px_1px_rgba(251,191,36,0.4)]">
           {isMe ? "Your turn" : "Acting"}
         </div>
       )}
@@ -107,7 +107,7 @@ export function PlayerSeat({
       <div
         className={`relative flex h-16 w-16 flex-col items-center justify-center rounded-full border bg-gradient-to-b from-zinc-800/90 via-black/90 to-black text-center backdrop-blur-sm transition-shadow ${
           isActingSeat
-            ? "border-amber-300 shadow-[0_0_24px_8px_rgba(251,191,36,0.9)] animate-pulse"
+            ? "border-amber-300/80 shadow-[0_0_10px_2px_rgba(251,191,36,0.4)]"
             : "border-neon/50 shadow-neon"
         }`}
       >
