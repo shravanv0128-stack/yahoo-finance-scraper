@@ -91,7 +91,7 @@ export default function HomePage() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 py-16">
       <div className="text-center">
         <h1 className="text-4xl font-bold text-chip-gold">Pips Poker</h1>
-        <p className="mt-2 max-w-md text-sm text-felt-light">
+        <p className="mt-2 max-w-md text-sm text-white/70">
           Half the pot goes to the best poker hand. Half goes to whoever holds the highest pip
           total in their 3 hole cards. Two ways to win every hand.
         </p>
@@ -112,14 +112,14 @@ export default function HomePage() {
 
       {session && (
         <div className="w-full max-w-sm rounded-lg border border-felt-light bg-felt p-6 shadow-table">
-          <div className="mb-4 flex items-center justify-between text-xs text-felt-light">
+          <div className="mb-4 flex items-center justify-between text-xs text-white/60">
             <span>Signed in as {session.user.email}</span>
-            <button onClick={() => signOut()} className="underline">
+            <button onClick={() => signOut()} className="text-white underline">
               Sign out
             </button>
           </div>
 
-          <label className="mb-1 block text-xs uppercase tracking-wide text-felt-light">
+          <label className="mb-1 block text-xs uppercase tracking-wide text-white/60">
             Your display name
           </label>
           <input
@@ -138,7 +138,7 @@ export default function HomePage() {
           />
           <div className="mb-2 grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-white/60">
                 Bomb pot (per hand)
               </label>
               <input
@@ -151,7 +151,7 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-white/60">
                 Starting stack
               </label>
               <input
@@ -164,7 +164,7 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-white/60">
                 Max players (2–8)
               </label>
               <input
@@ -178,7 +178,7 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-white/60">
                 Turn timer (sec)
               </label>
               <input
@@ -192,7 +192,7 @@ export default function HomePage() {
               />
             </div>
           </div>
-          <label className="mb-2 flex items-center gap-2 text-[11px] text-felt-light">
+          <label className="mb-2 flex items-center gap-2 text-[11px] text-white/70">
             <input
               type="checkbox"
               checked={allowRunItTwice}
@@ -201,7 +201,7 @@ export default function HomePage() {
             />
             Allow running it twice when everyone&apos;s all-in
           </label>
-          <p className="mb-2 text-[11px] text-felt-light/70">
+          <p className="mb-2 text-[11px] text-white/50">
             Every player puts in the bomb pot each hand — no blinds. Bets are plain dollar amounts; the
             most you can ever bet or raise is the size of the pot.
           </p>
