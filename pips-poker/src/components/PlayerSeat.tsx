@@ -105,14 +105,14 @@ export function PlayerSeat({
       )}
 
       <div
-        className={`relative flex h-16 w-16 flex-col items-center justify-center rounded-full border-2 bg-slate-800/90 text-center transition-shadow ${
+        className={`relative flex h-16 w-16 flex-col items-center justify-center rounded-full border-2 bg-black/70 text-center backdrop-blur-sm transition-shadow ${
           isActingSeat
             ? "border-amber-300 shadow-[0_0_24px_8px_rgba(251,191,36,0.9)] animate-pulse"
-            : "border-slate-600"
+            : "border-neon/40 shadow-neon"
         }`}
       >
         {isDealer && (
-          <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-slate-900 shadow">
+          <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-neon text-[10px] font-bold text-felt-dark shadow-neon">
             D
           </span>
         )}
@@ -127,12 +127,12 @@ export function PlayerSeat({
         )}
       </div>
 
-      <div className="rounded bg-black/40 px-2 py-0.5 text-xs font-medium text-emerald-300">
+      <div className="rounded-full border border-neon/30 bg-black/60 px-2 py-0.5 text-xs font-semibold text-neon">
         ${chipStack}
       </div>
 
       {currentBet > 0 && (
-        <div className="rounded-full bg-chip-gold/90 px-2 py-0.5 text-[10px] font-bold text-felt-dark shadow">
+        <div className="rounded-full bg-neon px-2 py-0.5 text-[10px] font-bold text-felt-dark shadow-neon">
           ${currentBet}
         </div>
       )}

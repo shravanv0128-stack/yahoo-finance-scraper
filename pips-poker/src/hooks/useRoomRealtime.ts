@@ -72,6 +72,7 @@ export interface RoomStateResponse {
     ante_amount: number;
     small_bet: number;
     act_timeout_seconds?: number;
+    max_players?: number;
   };
   players: RoomPlayer[];
   gameState: RoomGameState | null;

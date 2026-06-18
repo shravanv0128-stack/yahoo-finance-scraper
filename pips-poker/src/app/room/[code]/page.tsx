@@ -265,19 +265,33 @@ export default function RoomPage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-felt-dark">
-      <header className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-white">
-        <div>
-          <h1 className="text-lg font-bold text-chip-gold">{room.name}</h1>
-          <p className="text-xs text-white/60">
-            Room code: <span className="font-mono">{room.code}</span> &middot; Phase:{" "}
-            {gameState?.phase ?? "waiting_room"}
-          </p>
+      <header className="flex items-center justify-between border-b border-neon/15 bg-black/60 px-4 py-3 text-white backdrop-blur-sm">
+        <div className="flex items-center gap-6">
+          <span className="text-xl font-black tracking-wider text-neon drop-shadow-[0_0_8px_rgba(57,255,140,0.7)]">
+            PIPS
+          </span>
+          <div className="flex items-center gap-5 text-[11px]">
+            <div>
+              <p className="text-white/40">ROOM</p>
+              <p className="font-mono font-bold text-white">{room.code}</p>
+            </div>
+            <div>
+              <p className="text-white/40">GAME</p>
+              <p className="font-bold text-white">PIPS POKER</p>
+            </div>
+            <div>
+              <p className="text-white/40">PHASE</p>
+              <p className="font-bold uppercase text-white">{gameState?.phase ?? "waiting room"}</p>
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowLedger((v) => !v)}
-            className={`rounded px-3 py-2 text-xs font-semibold ${
-              showLedger ? "bg-chip-gold text-felt-dark" : "bg-slate-700 text-white"
+            className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+              showLedger
+                ? "border-neon bg-neon text-felt-dark shadow-neon"
+                : "border-white/15 bg-black/40 text-white hover:border-neon/50"
             }`}
           >
             Ledger
@@ -286,8 +300,10 @@ export default function RoomPage() {
             <button
               onClick={() => handleToggleAway(!myPlayer?.is_away)}
               disabled={busy}
-              className={`rounded px-3 py-2 text-xs font-semibold disabled:opacity-40 ${
-                myPlayer?.is_away ? "bg-chip-gold text-felt-dark" : "bg-slate-700 text-white"
+              className={`rounded-full border px-3 py-2 text-xs font-semibold transition disabled:opacity-40 ${
+                myPlayer?.is_away
+                  ? "border-neon bg-neon text-felt-dark shadow-neon"
+                  : "border-white/15 bg-black/40 text-white hover:border-neon/50"
               }`}
             >
               {myPlayer?.is_away ? "I'm back" : "I'm away"}
@@ -297,7 +313,7 @@ export default function RoomPage() {
             <button
               onClick={handleStart}
               disabled={busy || players.length < 2}
-              className="rounded bg-chip-gold px-4 py-2 text-sm font-semibold text-felt-dark disabled:opacity-40"
+              className="rounded-full bg-neon px-4 py-2 text-sm font-bold text-felt-dark shadow-neon transition disabled:opacity-40"
             >
               Start hand
             </button>
@@ -365,6 +381,20 @@ export default function RoomPage() {
           mySeat={myPlayer?.seat ?? null}
           actDeadline={gameState?.act_deadline ?? null}
           actTimeoutSeconds={room.act_timeout_seconds ?? 60}
+          maxSeats={room.max_players ?? 8}
+          onTakeSeat={
+            amSeated
+              ? undefined
+              : () => {
+                  if (!session) {
+                    signInWithGoogle();
+                  } else if (displayName.trim()) {
+                    handleJoin();
+                  } else {
+                    setActionError("Enter a display name above to take a seat");
+                  }
+                }
+          }
         />
       </div>
 

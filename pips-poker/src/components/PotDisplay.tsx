@@ -29,7 +29,7 @@ export function PotDisplay({
           {pots!.map((p, i) => (
             <div
               key={i}
-              className="flex items-center gap-2 rounded-full bg-black/50 px-4 py-1 shadow-lg ring-1 ring-chip-gold/40"
+              className="flex items-center gap-2 rounded-full bg-black/70 px-4 py-1 shadow-neon ring-1 ring-chip-gold/40"
             >
               <span className="h-2.5 w-2.5 rounded-full bg-chip-gold" />
               <span className="text-[11px] font-bold uppercase tracking-wide text-chip-gold">
@@ -41,7 +41,7 @@ export function PotDisplay({
           <span className="text-[10px] font-medium text-white/50">Total ${pot}</span>
         </div>
       ) : (
-        <div className="flex items-center gap-2 rounded-full bg-black/50 px-5 py-1.5 shadow-lg ring-1 ring-chip-gold/40">
+        <div className="flex items-center gap-2 rounded-full bg-black/70 px-5 py-1.5 shadow-neon ring-1 ring-chip-gold/40">
           <span className="h-3 w-3 rounded-full bg-chip-gold" />
           <span className="text-sm font-bold tracking-wide text-chip-gold">POT ${pot}</span>
         </div>

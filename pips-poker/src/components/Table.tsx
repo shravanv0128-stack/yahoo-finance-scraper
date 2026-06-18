@@ -35,6 +35,8 @@ export interface TableProps {
   mySeat: number | null;
   actDeadline?: string | null;
   actTimeoutSeconds?: number;
+  maxSeats?: number;
+  onTakeSeat?: () => void;
 }
 
 // Returns evenly spaced [x%, y%] positions around an ellipse, starting from
@@ -59,6 +61,8 @@ export function Table({
   mySeat,
   actDeadline = null,
   actTimeoutSeconds = 60,
+  maxSeats = 8,
+  onTakeSeat,
 }: TableProps) {
   // Rotate the seat order so the viewer's own seat is always index 0
   // (bottom-center), matching PokerNow's "you are always at the bottom".
@@ -71,11 +75,15 @@ export function Table({
           return [...seats.slice(myIdx), ...seats.slice(0, myIdx)];
         })();
 
+  const totalSlots = Math.max(maxSeats, orderedSeats.length);
+  const emptySlotCount = totalSlots - orderedSeats.length;
+
   return (
     <div className="relative mx-auto aspect-[16/10] w-full max-w-4xl">
       {/* Felt surface */}
-      <div className="absolute inset-[6%] rounded-[50%] bg-felt shadow-table ring-8 ring-felt-dark" />
-      <div className="absolute inset-[6%] rounded-[50%] ring-2 ring-chip-gold/20" />
+      <div className="absolute inset-[6%] rounded-[50%] bg-felt shadow-table ring-4 ring-neon/40" />
+      <div className="absolute inset-[6%] rounded-[50%] ring-1 ring-neon/20" />
+      <div className="absolute inset-[9%] rounded-[50%] border border-neon/10" />
 
       {/* Center: community cards + pot */}
       <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
@@ -83,9 +91,9 @@ export function Table({
         <CommunityBoard cards={communityCards} />
       </div>
 
-      {/* Seats */}
+      {/* Occupied seats */}
       {orderedSeats.map((s, i) => {
-        const pos = ellipsePosition(i, orderedSeats.length);
+        const pos = ellipsePosition(i, totalSlots);
         return (
           <div
             key={s.seat}
@@ -110,6 +118,24 @@ export function Table({
               actTimeoutSeconds={actTimeoutSeconds}
             />
           </div>
+        );
+      })}
+
+      {/* Empty slots: futuristic "TAKE SEAT" placeholders */}
+      {Array.from({ length: emptySlotCount }).map((_, i) => {
+        const pos = ellipsePosition(orderedSeats.length + i, totalSlots);
+        return (
+          <button
+            key={`empty-${i}`}
+            onClick={onTakeSeat}
+            disabled={!onTakeSeat}
+            className="absolute flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-neon/30 bg-black/60 text-center text-[10px] font-bold uppercase tracking-wide text-neon/70 shadow-neon transition hover:bg-neon/10 hover:text-neon disabled:cursor-default disabled:opacity-50"
+            style={{ left: pos.left, top: pos.top }}
+          >
+            Take
+            <br />
+            Seat
+          </button>
         );
       })}
     </div>
