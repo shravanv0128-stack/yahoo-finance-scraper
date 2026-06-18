@@ -376,8 +376,14 @@ export default function RoomPage() {
         </div>
       )}
 
-      {isRunTwicePending && amInLiveHand && (
-        <RunItTwicePrompt disabled={busy} onChoose={handleRunTwice} />
+      {isRunTwicePending && amInLiveHand && myHandPlayer && (
+        <RunItTwicePrompt
+          disabled={busy}
+          hasVoted={!!gameState?.run_it_twice_votes?.[myHandPlayer.id]}
+          votesIn={Object.values(gameState?.run_it_twice_votes ?? {}).filter(Boolean).length}
+          votesNeeded={handPlayers.filter((hp) => hp.status !== "folded").length}
+          onChoose={handleRunTwice}
+        />
       )}
 
       {canOfferShow && <ShowMuckPrompt disabled={busy} onChoose={handleShowDecision} />}

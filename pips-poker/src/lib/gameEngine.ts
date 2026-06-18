@@ -351,6 +351,7 @@ export async function applyBettingAction(
       active_seat: nextActiveSeat,
       act_deadline: nextActiveSeat !== null ? newActDeadline() : null,
       awaiting_run_it_twice: awaitingRunItTwice,
+      run_it_twice_votes: {},
       updated_at: new Date().toISOString(),
     })
     .eq("room_id", roomId);
@@ -402,6 +403,58 @@ export async function enforceActTimeout(supabase: SupabaseClient, roomId: string
 }
 
 /**
+ * Records one contender's run-it-twice vote and resolves the table's
+ * decision once everyone eligible has weighed in: unanimous "run it twice"
+ * votes resolve to two boards, but a single "run it once" vote (or anyone
+ * declining) resolves immediately to one board - matching the real-room
+ * convention that running it twice requires everyone at the table to agree.
+ */
+export async function castRunItTwiceVote(
+  supabase: SupabaseClient,
+  roomId: string,
+  handId: string,
+  handPlayerId: string,
+  vote: boolean
+) {
+  const { data: gameState, error: gsError } = await supabase
+    .from("game_state")
+    .select("phase, run_it_twice_votes")
+    .eq("room_id", roomId)
+    .single();
+  if (gsError) throw gsError;
+  if (gameState.phase !== "all_in_runout") {
+    throw new Error("No run-it-twice decision is pending for this room");
+  }
+
+  if (!vote) {
+    // A single decline is enough to settle it - run the board once.
+    await resolveRunItTwice(supabase, roomId, handId, false);
+    return { resolved: true, runTwice: false };
+  }
+
+  const votes: Record<string, boolean> = { ...(gameState.run_it_twice_votes ?? {}), [handPlayerId]: true };
+
+  const { data: handPlayers, error: hpError } = await supabase
+    .from("hand_players")
+    .select("id, status")
+    .eq("hand_id", handId);
+  if (hpError) throw hpError;
+  const contenderIds = (handPlayers as { id: string; status: string }[])
+    .filter((p) => p.status !== "folded")
+    .map((p) => p.id);
+
+  const allVotedYes = contenderIds.every((id) => votes[id] === true);
+
+  if (allVotedYes) {
+    await resolveRunItTwice(supabase, roomId, handId, true);
+    return { resolved: true, runTwice: true };
+  }
+
+  await supabase.from("game_state").update({ run_it_twice_votes: votes }).eq("room_id", roomId);
+  return { resolved: false, votes };
+}
+
+/**
  * Resolves an "all_in_runout" pause: deals the remaining community cards
  * either once (runTwice=false) or twice as two independent boards
  * (runTwice=true, the standard "run it twice" rule - each board gets dealt
@@ -409,7 +462,7 @@ export async function enforceActTimeout(supabase: SupabaseClient, roomId: string
  * between the two board outcomes). Then runs showdown against the
  * resulting board(s).
  */
-export async function resolveRunItTwice(
+async function resolveRunItTwice(
   supabase: SupabaseClient,
   roomId: string,
   handId: string,

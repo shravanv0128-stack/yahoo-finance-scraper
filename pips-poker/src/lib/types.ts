@@ -100,6 +100,7 @@ export interface GameStateRow {
   active_seat: number | null; // whose turn it is to act (betting rounds only)
   act_deadline: string | null; // ISO timestamp; active_seat must act by this time or is auto-folded/checked
   awaiting_run_it_twice: boolean; // true once all remaining contenders are all-in and a run-twice decision is pending
+  run_it_twice_votes: Record<string, boolean>; // hand_player_id -> vote, collected while awaiting_run_it_twice; resolves to "run twice" only once every contender has voted true, or immediately to "run once" if anyone votes false
   community_cards_2: Card[] | null; // second board, only populated when run-it-twice was chosen
   last_aggressor_seat: number | null; // last bettor/raiser in the current betting round, reset each new round
   awaiting_show_decision: boolean; // true during the "showdown" phase while contenders take turns choosing show/muck

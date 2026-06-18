@@ -1,13 +1,12 @@
-// POST /api/hands/run-twice - resolve an "all_in_runout" pause once every
-// remaining contender is all-in. Any seated player in the hand can submit
-// the table's decision (in practice the UI should only let players still in
-// the hand choose); the deck is dealt once (runTwice=false) or twice
-// (runTwice=true, the standard 50/50 split rule) and showdown runs against
-// the resulting board(s).
+// POST /api/hands/run-twice - cast one contender's run-it-twice vote during
+// an "all_in_runout" pause. Running it twice requires every remaining
+// contender to vote yes; a single "run it once" vote settles it immediately.
+// The deck is dealt once (runTwice=false) or twice (runTwice=true) and
+// showdown runs automatically once the table's decision is settled.
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";
-import { resolveRunItTwice } from "@/lib/gameEngine";
+import { castRunItTwiceVote } from "@/lib/gameEngine";
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,7 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "You are not seated in this hand" }, { status: 403 });
     }
 
-    const result = await resolveRunItTwice(supabase, roomId, gameState.hand_id, !!body.runTwice);
+    const result = await castRunItTwiceVote(supabase, roomId, gameState.hand_id, handPlayer.id, !!body.runTwice);
     return NextResponse.json(result);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";

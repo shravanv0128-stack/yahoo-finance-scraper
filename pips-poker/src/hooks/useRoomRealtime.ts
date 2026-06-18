@@ -55,6 +55,7 @@ export interface RoomGameState {
   active_seat: number | null;
   act_deadline: string | null;
   awaiting_run_it_twice: boolean;
+  run_it_twice_votes: Record<string, boolean>;
   community_cards_2: Card[] | null;
   showdown_result: ShowdownResult | null;
   hand_id: string | null;

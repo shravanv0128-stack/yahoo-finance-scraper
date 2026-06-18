@@ -145,6 +145,7 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
           active_seat: gameState.active_seat,
           act_deadline: gameState.act_deadline,
           awaiting_run_it_twice: gameState.awaiting_run_it_twice,
+          run_it_twice_votes: gameState.run_it_twice_votes ?? {},
           community_cards_2: gameState.community_cards_2,
           showdown_result: gameState.showdown_result ?? null,
           hand_id: gameState.hand_id,

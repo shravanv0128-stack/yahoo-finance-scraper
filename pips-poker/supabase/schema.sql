@@ -111,6 +111,7 @@ create table if not exists game_state (
   active_seat integer,
   act_deadline timestamptz,
   awaiting_run_it_twice boolean not null default false,
+  run_it_twice_votes jsonb not null default '{}'::jsonb,
   community_cards_2 jsonb,
   last_aggressor_seat integer,
   awaiting_show_decision boolean not null default false,
@@ -194,3 +195,5 @@ alter table players add column if not exists is_away boolean not null default fa
 alter table game_state add column if not exists act_deadline timestamptz;
 alter table game_state add column if not exists awaiting_run_it_twice boolean not null default false;
 alter table game_state add column if not exists community_cards_2 jsonb;
+-- Run this once to add unanimous run-it-twice voting:
+-- alter table game_state add column if not exists run_it_twice_votes jsonb not null default '{}'::jsonb;
