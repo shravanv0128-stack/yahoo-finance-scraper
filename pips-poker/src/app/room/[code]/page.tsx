@@ -342,6 +342,7 @@ export default function RoomPage() {
           communityCards={gameState?.community_cards ?? []}
           pot={gameState?.pot ?? 0}
           currentBet={gameState?.current_bet ?? 0}
+          pots={gameState?.pots ?? []}
           mySeat={myPlayer?.seat ?? null}
         />
       </div>

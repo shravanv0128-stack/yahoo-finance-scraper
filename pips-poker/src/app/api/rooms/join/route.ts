@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";
 
-const MAX_SEATS = 8;
+const SEAT_HARD_CAP = 8;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(req: NextRequest) {
@@ -52,13 +52,21 @@ export async function POST(req: NextRequest) {
       .eq("room_id", room.id);
     if (seatedError) throw seatedError;
 
-    const takenSeats = new Set((seated ?? []).map((p) => p.seat));
-    let seat = 0;
-    while (takenSeats.has(seat)) seat++;
-    if (seat >= MAX_SEATS) {
+    // The room's own max_players caps the table (host-configured), but never
+    // beyond the hard seat cap the table layout supports.
+    const maxSeats = Math.min(SEAT_HARD_CAP, room.max_players ?? SEAT_HARD_CAP);
+    if ((seated ?? []).length >= maxSeats) {
       return NextResponse.json({ error: "Room is full" }, { status: 409 });
     }
 
+    const takenSeats = new Set((seated ?? []).map((p) => p.seat));
+    let seat = 0;
+    while (takenSeats.has(seat)) seat++;
+    if (seat >= SEAT_HARD_CAP) {
+      return NextResponse.json({ error: "Room is full" }, { status: 409 });
+    }
+
+    const startingStack = room.starting_stack ?? 1000;
     const { data: player, error: playerError } = await supabase
       .from("players")
       .insert({
@@ -66,8 +74,8 @@ export async function POST(req: NextRequest) {
         room_id: room.id,
         display_name: displayName,
         seat,
-        chip_stack: 1000,
-        buy_in: 1000,
+        chip_stack: startingStack,
+        buy_in: startingStack,
         is_active: true,
       })
       .select()

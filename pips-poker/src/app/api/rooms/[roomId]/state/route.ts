@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";
 import { enforceActTimeout, startNewHand } from "@/lib/gameEngine";
+import { buildSidePots } from "@/lib/bettingEngine";
 
 // How long the completed-hand summary stays on screen before the next hand
 // is dealt automatically. Long enough to read who won (and to watch both
@@ -133,6 +134,24 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       }
     }
 
+    // Break the pot into main pot + side pots for display, computed live from
+    // what each player has committed this hand. Side pots only arise when one
+    // or more players are all-in for less than the others, so a single-element
+    // result (the common case) just renders as one "Pot" figure on the client.
+    const potBreakdown =
+      handPlayers.length > 0
+        ? buildSidePots(
+            (handPlayers as { id: string; total_committed: number; status: string }[]).map((hp) => ({
+              hand_player_id: hp.id,
+              total_committed: hp.total_committed,
+              status: hp.status as never,
+            }))
+          ).map((p, i, all) => ({
+            amount: p.amount,
+            label: all.length === 1 ? "Pot" : i === 0 ? "Main pot" : `Side pot ${i}`,
+          }))
+        : [];
+
     // Strip server-only fields (deck) before returning game state to the client.
     const publicGameState = gameState
       ? {
@@ -148,6 +167,7 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
           run_it_twice_votes: gameState.run_it_twice_votes ?? {},
           community_cards_2: gameState.community_cards_2,
           showdown_result: gameState.showdown_result ?? null,
+          pots: potBreakdown,
           hand_id: gameState.hand_id,
         }
       : null;

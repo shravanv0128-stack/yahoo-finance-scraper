@@ -58,6 +58,7 @@ export interface RoomGameState {
   run_it_twice_votes: Record<string, boolean>;
   community_cards_2: Card[] | null;
   showdown_result: ShowdownResult | null;
+  pots: { amount: number; label: string }[];
   hand_id: string | null;
 }
 

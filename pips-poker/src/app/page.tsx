@@ -13,6 +13,10 @@ export default function HomePage() {
   const [joinCode, setJoinCode] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [anteAmount, setAnteAmount] = useState("0.5");
+  const [startingStack, setStartingStack] = useState("1000");
+  const [maxPlayers, setMaxPlayers] = useState("8");
+  const [actTimeoutSeconds, setActTimeoutSeconds] = useState("60");
+  const [allowRunItTwice, setAllowRunItTwice] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -57,6 +61,10 @@ export default function HomePage() {
         name: name || "Pips Poker Table",
         displayName,
         anteAmount: Number(anteAmount) || undefined,
+        startingStack: Number(startingStack) || undefined,
+        maxPlayers: Number(maxPlayers) || undefined,
+        actTimeoutSeconds: Number(actTimeoutSeconds) || undefined,
+        allowRunItTwice,
       });
       router.push(`/room/${data.room.id}`);
     } catch (e) {
@@ -128,19 +136,71 @@ export default function HomePage() {
             onChange={(e) => setName(e.target.value)}
             placeholder="Table name"
           />
-          <div className="mb-2">
-            <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
-              Bomb pot (per hand)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
-              value={anteAmount}
-              onChange={(e) => setAnteAmount(e.target.value)}
-            />
+          <div className="mb-2 grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
+                Bomb pot (per hand)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+                value={anteAmount}
+                onChange={(e) => setAnteAmount(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
+                Starting stack
+              </label>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+                value={startingStack}
+                onChange={(e) => setStartingStack(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
+                Max players (2–8)
+              </label>
+              <input
+                type="number"
+                step="1"
+                min="2"
+                max="8"
+                className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+                value={maxPlayers}
+                onChange={(e) => setMaxPlayers(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] uppercase tracking-wide text-felt-light">
+                Turn timer (sec)
+              </label>
+              <input
+                type="number"
+                step="5"
+                min="10"
+                max="300"
+                className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+                value={actTimeoutSeconds}
+                onChange={(e) => setActTimeoutSeconds(e.target.value)}
+              />
+            </div>
           </div>
+          <label className="mb-2 flex items-center gap-2 text-[11px] text-felt-light">
+            <input
+              type="checkbox"
+              checked={allowRunItTwice}
+              onChange={(e) => setAllowRunItTwice(e.target.checked)}
+              className="h-3.5 w-3.5 accent-chip-gold"
+            />
+            Allow running it twice when everyone&apos;s all-in
+          </label>
           <p className="mb-2 text-[11px] text-felt-light/70">
             Every player puts in the bomb pot each hand — no blinds. Bets are plain dollar amounts; the
             most you can ever bet or raise is the size of the pot.

@@ -21,6 +21,11 @@ create table if not exists rooms (
   -- plain dollar amounts (e.g. ANTE_AMOUNT = 0.5) to match.
   ante_amount numeric(10,2) not null default 0.5,
   small_bet numeric(10,2) not null default 1,
+  -- Host-configured table settings, chosen on the create-room screen.
+  starting_stack numeric(10,2) not null default 1000,
+  max_players integer not null default 8,
+  act_timeout_seconds integer not null default 60,
+  allow_run_it_twice boolean not null default true,
   created_at timestamptz not null default now()
 );
 
@@ -197,3 +202,8 @@ alter table game_state add column if not exists awaiting_run_it_twice boolean no
 alter table game_state add column if not exists community_cards_2 jsonb;
 -- Run this once to add unanimous run-it-twice voting:
 -- alter table game_state add column if not exists run_it_twice_votes jsonb not null default '{}'::jsonb;
+-- Run this once to add host-configured table settings:
+-- alter table rooms add column if not exists starting_stack numeric(10,2) not null default 1000;
+-- alter table rooms add column if not exists max_players integer not null default 8;
+-- alter table rooms add column if not exists act_timeout_seconds integer not null default 60;
+-- alter table rooms add column if not exists allow_run_it_twice boolean not null default true;

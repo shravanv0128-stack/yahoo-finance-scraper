@@ -31,10 +31,10 @@ import {
 import { evaluateBestHand, findHandWinners, handCategoryLabel } from "./handEvaluator";
 import { computePipTotal, findPipWinners } from "./pipEvaluator";
 
-const ACT_TIMEOUT_MS = 60_000;
+const DEFAULT_ACT_TIMEOUT_SECONDS = 60;
 
-function newActDeadline(): string {
-  return new Date(Date.now() + ACT_TIMEOUT_MS).toISOString();
+function newActDeadline(timeoutSeconds: number = DEFAULT_ACT_TIMEOUT_SECONDS): string {
+  return new Date(Date.now() + timeoutSeconds * 1000).toISOString();
 }
 
 interface HandPlayerRow {
@@ -65,12 +65,13 @@ interface HandPlayerRow {
 export async function startNewHand(supabase: SupabaseClient, roomId: string) {
   const { data: room, error: roomError } = await supabase
     .from("rooms")
-    .select("ante_amount, small_bet")
+    .select("ante_amount, small_bet, act_timeout_seconds")
     .eq("id", roomId)
     .single();
   if (roomError) throw roomError;
   const anteAmount = room.ante_amount ?? 0.5;
   const minBet = room.small_bet ?? 1;
+  const actTimeout = room.act_timeout_seconds ?? DEFAULT_ACT_TIMEOUT_SECONDS;
 
   const { data: players, error: playersError } = await supabase
     .from("players")
@@ -168,8 +169,9 @@ export async function startNewHand(supabase: SupabaseClient, roomId: string) {
       min_raise: minBet,
       dealer_seat: players[0].seat,
       active_seat: firstToAct.seat,
-      act_deadline: newActDeadline(),
+      act_deadline: newActDeadline(actTimeout),
       awaiting_run_it_twice: false,
+      run_it_twice_votes: {},
       community_cards_2: null,
       showdown_result: null,
       updated_at: new Date().toISOString(),
@@ -223,11 +225,13 @@ export async function applyBettingAction(
 
   const { data: room, error: roomError } = await supabase
     .from("rooms")
-    .select("small_bet")
+    .select("small_bet, act_timeout_seconds, allow_run_it_twice")
     .eq("id", roomId)
     .single();
   if (roomError) throw roomError;
   const minBet = room.small_bet ?? 1;
+  const actTimeout = room.act_timeout_seconds ?? DEFAULT_ACT_TIMEOUT_SECONDS;
+  const allowRunItTwice = room.allow_run_it_twice !== false;
 
   const { data: handPlayers, error: hpError } = await supabase
     .from("hand_players")
@@ -349,8 +353,8 @@ export async function applyBettingAction(
       current_bet: roundComplete ? 0 : result.state.currentBet,
       min_raise: roundComplete ? minBet : result.state.minRaise,
       active_seat: nextActiveSeat,
-      act_deadline: nextActiveSeat !== null ? newActDeadline() : null,
-      awaiting_run_it_twice: awaitingRunItTwice,
+      act_deadline: nextActiveSeat !== null ? newActDeadline(actTimeout) : null,
+      awaiting_run_it_twice: awaitingRunItTwice && allowRunItTwice,
       run_it_twice_votes: {},
       updated_at: new Date().toISOString(),
     })
@@ -360,6 +364,10 @@ export async function applyBettingAction(
 
   if (newPhase === "showdown") {
     await runShowdown(supabase, roomId, handId);
+  } else if (newPhase === "all_in_runout" && !allowRunItTwice) {
+    // The host disabled run-it-twice, so there's no decision to wait on -
+    // deal the single remaining board and resolve the showdown immediately.
+    await resolveRunItTwice(supabase, roomId, handId, false);
   }
 
   return { phase: newPhase, pot: result.state.pot };
@@ -533,11 +541,12 @@ export async function applySwap(
 
   const { data: room, error: roomError } = await supabase
     .from("rooms")
-    .select("small_bet")
+    .select("small_bet, act_timeout_seconds")
     .eq("id", roomId)
     .single();
   if (roomError) throw roomError;
   const minBet = room.small_bet ?? 1;
+  const actTimeout = room.act_timeout_seconds ?? DEFAULT_ACT_TIMEOUT_SECONDS;
 
   const { data: handPlayer, error: hpError } = await supabase
     .from("hand_players")
@@ -618,7 +627,7 @@ export async function applySwap(
         current_bet: 0,
         min_raise: minBet,
         active_seat: firstActive ? firstActive.seat : null,
-        act_deadline: firstActive ? newActDeadline() : null,
+        act_deadline: firstActive ? newActDeadline(actTimeout) : null,
         updated_at: new Date().toISOString(),
       })
       .eq("room_id", roomId);

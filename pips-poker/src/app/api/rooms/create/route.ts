@@ -10,11 +10,16 @@ function generateRoomCode(): string {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, displayName, anteAmount } = body as {
-      name?: string;
-      displayName?: string;
-      anteAmount?: number;
-    };
+    const { name, displayName, anteAmount, startingStack, maxPlayers, actTimeoutSeconds, allowRunItTwice } =
+      body as {
+        name?: string;
+        displayName?: string;
+        anteAmount?: number;
+        startingStack?: number;
+        maxPlayers?: number;
+        actTimeoutSeconds?: number;
+        allowRunItTwice?: boolean;
+      };
     if (!displayName) {
       return NextResponse.json({ error: "displayName is required" }, { status: 400 });
     }
@@ -23,6 +28,12 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Clamp host-chosen settings to sane ranges so a bad form value can't
+    // create an unplayable table.
+    const stack = startingStack && startingStack > 0 ? startingStack : 1000;
+    const seats = maxPlayers ? Math.min(8, Math.max(2, Math.round(maxPlayers))) : 8;
+    const timeout = actTimeoutSeconds ? Math.min(300, Math.max(10, Math.round(actTimeoutSeconds))) : 60;
 
     const supabase = getServiceRoleClient();
 
@@ -34,6 +45,10 @@ export async function POST(req: NextRequest) {
         created_by: user.id,
         ante_amount: anteAmount && anteAmount > 0 ? anteAmount : 0.5,
         small_bet: 1,
+        starting_stack: stack,
+        max_players: seats,
+        act_timeout_seconds: timeout,
+        allow_run_it_twice: allowRunItTwice !== false,
       })
       .select()
       .single();
@@ -46,8 +61,8 @@ export async function POST(req: NextRequest) {
         room_id: room.id,
         display_name: displayName,
         seat: 0,
-        chip_stack: 1000,
-        buy_in: 1000,
+        chip_stack: stack,
+        buy_in: stack,
         is_active: true,
       })
       .select()
