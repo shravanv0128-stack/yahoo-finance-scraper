@@ -79,11 +79,12 @@ export async function startNewHand(supabase: SupabaseClient, roomId: string) {
     .eq("room_id", roomId)
     .eq("is_active", true)
     .eq("is_away", false)
+    .gt("chip_stack", 0)
     .order("seat", { ascending: true });
 
   if (playersError) throw playersError;
   if (!players || players.length < 2) {
-    throw new Error("Need at least 2 active players to start a hand");
+    throw new Error("Need at least 2 active players with chips to start a hand");
   }
 
   const { data: existingHands } = await supabase

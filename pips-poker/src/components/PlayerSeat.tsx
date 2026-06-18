@@ -39,6 +39,7 @@ export function PlayerSeat({
   const cardsToShow = revealedCards ?? (isMe ? holeCards : null);
   const showFaceUp = revealedCards !== null || isMe;
   const folded = status === "folded";
+  const busted = chipStack <= 0 && status === "sitting_out";
 
   // Live "what am I holding" ribbon for the viewer's own seat during play:
   // the current best poker hand (given the board so far) plus the pip total.
@@ -53,7 +54,7 @@ export function PlayerSeat({
   }
 
   return (
-    <div className={`flex flex-col items-center gap-1 ${folded ? "opacity-40" : ""}`}>
+    <div className={`flex flex-col items-center gap-1 ${folded || busted ? "opacity-40" : ""}`}>
       <div className="flex gap-1">
         {(cardsToShow ?? (holeCards ? [null, null, null] : [])).map((_, i) => (
           <Card
@@ -107,6 +108,9 @@ export function PlayerSeat({
       )}
 
       {folded && <span className="text-[10px] uppercase tracking-wide text-gray-400">Folded</span>}
+      {busted && (
+        <span className="text-[10px] font-bold uppercase tracking-wide text-chip-red">Busted - rebuy to play</span>
+      )}
       {revealedPipTotal !== null && (
         <span className="text-[10px] text-chip-blue">Pips: {revealedPipTotal}</span>
       )}
