@@ -105,10 +105,10 @@ export function PlayerSeat({
       )}
 
       <div
-        className={`relative flex h-16 w-16 flex-col items-center justify-center rounded-full border-2 bg-black/70 text-center backdrop-blur-sm transition-shadow ${
+        className={`relative flex h-16 w-16 flex-col items-center justify-center rounded-full border bg-gradient-to-b from-zinc-800/90 via-black/90 to-black text-center backdrop-blur-sm transition-shadow ${
           isActingSeat
             ? "border-amber-300 shadow-[0_0_24px_8px_rgba(251,191,36,0.9)] animate-pulse"
-            : "border-neon/40 shadow-neon"
+            : "border-neon/50 shadow-neon"
         }`}
       >
         {isDealer && (

@@ -381,20 +381,6 @@ export default function RoomPage() {
           mySeat={myPlayer?.seat ?? null}
           actDeadline={gameState?.act_deadline ?? null}
           actTimeoutSeconds={room.act_timeout_seconds ?? 60}
-          maxSeats={room.max_players ?? 8}
-          onTakeSeat={
-            amSeated
-              ? undefined
-              : () => {
-                  if (!session) {
-                    signInWithGoogle();
-                  } else if (displayName.trim()) {
-                    handleJoin();
-                  } else {
-                    setActionError("Enter a display name above to take a seat");
-                  }
-                }
-          }
         />
       </div>
 
