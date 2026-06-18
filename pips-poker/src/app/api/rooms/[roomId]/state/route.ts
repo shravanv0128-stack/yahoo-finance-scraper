@@ -55,16 +55,15 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       .maybeSingle();
 
     // Auto-deal the next hand a few seconds after a hand completes, so the
-    // table advances on its own without anyone clicking "Start hand". Only
-    // the room creator's poll triggers it (matching "only the room owner can
-    // start the hand"), and only after the summary has been on screen for
-    // AUTO_NEXT_HAND_MS. Driven from the poll (not a client setTimeout) so it
-    // still fires even if the creator's tab was backgrounded. Best-effort: if
-    // it races or there aren't enough active players, it's safely ignored and
-    // the creator can still start manually.
+    // table advances on its own without anyone clicking "Start hand". Any
+    // seated player's poll can trigger it (not just the creator's) so the
+    // table never stalls just because the owner's tab is closed or asleep -
+    // the atomic claim below still guarantees exactly one deal. Driven from
+    // the poll (not a client setTimeout) so it fires even on backgrounded
+    // tabs. Best-effort: if it races or there aren't enough active players,
+    // it's safely ignored and the owner can still start manually.
     if (
       gameState?.phase === "hand_complete" &&
-      room.created_by === user.id &&
       gameState.updated_at &&
       Date.now() - new Date(gameState.updated_at).getTime() >= AUTO_NEXT_HAND_MS
     ) {

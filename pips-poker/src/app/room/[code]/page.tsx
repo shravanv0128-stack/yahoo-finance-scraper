@@ -31,6 +31,7 @@ export default function RoomPage() {
   const [displayName, setDisplayName] = useState("");
   const [session, setSession] = useState<Session | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
+  const [showLedger, setShowLedger] = useState(false);
 
   useEffect(() => {
     getSession().then((s) => {
@@ -278,6 +279,14 @@ export default function RoomPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowLedger((v) => !v)}
+            className={`rounded px-3 py-2 text-xs font-semibold ${
+              showLedger ? "bg-chip-gold text-felt-dark" : "bg-slate-700 text-white"
+            }`}
+          >
+            Ledger
+          </button>
           {amSeated && canStartHand && (
             <button
               onClick={() => handleToggleAway(!myPlayer?.is_away)}
@@ -303,6 +312,21 @@ export default function RoomPage() {
 
       {actionError && (
         <p className="mx-auto mt-2 rounded bg-chip-red/20 px-4 py-1 text-sm text-chip-red">{actionError}</p>
+      )}
+
+      {showLedger && players.length > 0 && (
+        <LedgerPanel
+          players={players.map((p) => ({
+            id: p.id,
+            displayName: p.display_name,
+            seat: p.seat,
+            chipStack: p.chip_stack,
+            buyIn: p.buy_in,
+          }))}
+          disabled={busy}
+          canEdit={isCreator && canStartHand}
+          onAdjust={handleLedgerAdjust}
+        />
       )}
 
       {!amSeated && sessionLoaded && !session && (
@@ -412,20 +436,6 @@ export default function RoomPage() {
         </p>
       )}
 
-      {players.length > 0 && (
-        <LedgerPanel
-          players={players.map((p) => ({
-            id: p.id,
-            displayName: p.display_name,
-            seat: p.seat,
-            chipStack: p.chip_stack,
-            buyIn: p.buy_in,
-          }))}
-          disabled={busy}
-          canEdit={isCreator && canStartHand}
-          onAdjust={handleLedgerAdjust}
-        />
-      )}
 
       {isCreator && isStuckHand && (
         <div className="mx-auto mt-4 flex w-full max-w-md flex-col items-center gap-2 rounded-lg border border-chip-red/40 bg-felt p-3">
