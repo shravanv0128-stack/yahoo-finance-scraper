@@ -22,6 +22,7 @@ export interface TableSeatData {
   holeCards: Card[] | null;
   revealedCards: Card[] | null;
   revealedPipTotal: number | null;
+  swappedCount: number | null;
 }
 
 export interface TableProps {
@@ -91,6 +92,7 @@ export function Table({ seats, dealerSeat, communityCards, pot, currentBet, pots
               holeCards={s.holeCards}
               revealedCards={s.revealedCards}
               revealedPipTotal={s.revealedPipTotal}
+              swappedCount={s.swappedCount}
               communityCards={communityCards}
             />
           </div>

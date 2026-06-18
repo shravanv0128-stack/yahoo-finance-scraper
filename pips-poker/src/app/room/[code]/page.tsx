@@ -239,6 +239,7 @@ export default function RoomPage() {
       holeCards: isMe ? myHoleCards : hp ? [null, null, null].map(() => null) as any : null,
       revealedCards: hp?.revealed_cards ?? null,
       revealedPipTotal: hp?.revealed_pip_total ?? null,
+      swappedCount: hp?.has_swapped ? hp.swapped_count ?? 0 : null,
     };
   });
 

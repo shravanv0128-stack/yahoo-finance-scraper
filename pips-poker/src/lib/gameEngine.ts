@@ -582,7 +582,10 @@ export async function applySwap(
   }
 
   await supabase.from("hole_cards").update({ cards: newHand }).eq("id", holeRow.id);
-  await supabase.from("hand_players").update({ has_swapped: true }).eq("id", handPlayerId);
+  await supabase
+    .from("hand_players")
+    .update({ has_swapped: true, swapped_count: discardCount })
+    .eq("id", handPlayerId);
   await supabase.from("game_state").update({ deck, updated_at: new Date().toISOString() }).eq("room_id", roomId);
 
   // Check whether every non-folded player has now swapped (or stood pat = also has_swapped=true).

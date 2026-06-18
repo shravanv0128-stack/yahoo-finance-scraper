@@ -207,7 +207,7 @@ export function buildSidePots(
   const contributors = players.filter((p) => p.total_committed > 0);
   const levels = Array.from(new Set(contributors.map((p) => p.total_committed))).sort((a, b) => a - b);
 
-  const sidePots: SidePot[] = [];
+  const rawLayers: SidePot[] = [];
   let previousLevel = 0;
 
   for (const level of levels) {
@@ -216,9 +216,29 @@ export function buildSidePots(
     const potAmount = layerSize * contributingThisLayer.length;
     if (potAmount > 0) {
       const eligible = contributingThisLayer.filter((p) => p.status !== "folded").map((p) => p.hand_player_id);
-      sidePots.push({ amount: potAmount, eligibleHandPlayerIds: eligible });
+      rawLayers.push({ amount: potAmount, eligibleHandPlayerIds: eligible });
     }
     previousLevel = level;
+  }
+
+  // A new contribution level only represents a *real* side pot when it
+  // changes who's still eligible to win it (i.e. an all-in cap). A folded
+  // player simply contributing less than everyone else creates a level but
+  // doesn't change eligibility (they're already excluded), so merge any
+  // adjacent layers that share the exact same eligible set back into one
+  // pot rather than rendering a phantom side pot.
+  const sidePots: SidePot[] = [];
+  for (const layer of rawLayers) {
+    const prev = sidePots[sidePots.length - 1];
+    const sameEligibility =
+      prev &&
+      prev.eligibleHandPlayerIds.length === layer.eligibleHandPlayerIds.length &&
+      prev.eligibleHandPlayerIds.every((id) => layer.eligibleHandPlayerIds.includes(id));
+    if (prev && sameEligibility) {
+      prev.amount += layer.amount;
+    } else {
+      sidePots.push({ ...layer });
+    }
   }
 
   return sidePots;

@@ -207,3 +207,5 @@ alter table game_state add column if not exists community_cards_2 jsonb;
 -- alter table rooms add column if not exists max_players integer not null default 8;
 -- alter table rooms add column if not exists act_timeout_seconds integer not null default 60;
 -- alter table rooms add column if not exists allow_run_it_twice boolean not null default true;
+-- Run this once to show "X swapped N cards" bubbles during draw_swap:
+-- alter table hand_players add column if not exists swapped_count integer;

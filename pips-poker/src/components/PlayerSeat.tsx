@@ -15,6 +15,7 @@ export interface PlayerSeatProps {
   holeCards: CardType[] | null; // null = unknown/hidden, [] = folded/no cards
   revealedCards: CardType[] | null;
   revealedPipTotal: number | null;
+  swappedCount: number | null;
   communityCards?: CardType[];
 }
 
@@ -34,6 +35,7 @@ export function PlayerSeat({
   holeCards,
   revealedCards,
   revealedPipTotal,
+  swappedCount,
   communityCards,
 }: PlayerSeatProps) {
   const cardsToShow = revealedCards ?? (isMe ? holeCards : null);
@@ -65,6 +67,12 @@ export function PlayerSeat({
           />
         ))}
       </div>
+
+      {!isMe && !folded && swappedCount !== null && (
+        <div className="rounded-full bg-slate-900/90 px-2 py-0.5 text-[10px] font-semibold text-chip-gold shadow ring-1 ring-chip-gold/40">
+          {swappedCount === 0 ? `${displayName} stood pat` : `${displayName} swapped ${swappedCount}`}
+        </div>
+      )}
 
       {(liveLabel || livePips !== null) && (
         <div className="flex items-center gap-1 rounded-full bg-slate-900/90 px-2 py-0.5 text-[10px] font-semibold shadow ring-1 ring-chip-gold/40">

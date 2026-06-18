@@ -38,6 +38,7 @@ export interface RoomHandPlayer {
   total_committed: number;
   has_acted_this_round: boolean;
   has_swapped: boolean;
+  swapped_count: number | null;
   revealed_cards: Card[] | null;
   revealed_pip_total: number | null;
   amount_won: number;
