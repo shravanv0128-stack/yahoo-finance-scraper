@@ -19,17 +19,22 @@ export function Card({
   card,
   faceDown = false,
   size = "md",
+  highlight = false,
 }: {
   card?: CardType | null;
   faceDown?: boolean;
   size?: "sm" | "md" | "lg";
+  highlight?: boolean;
 }) {
   const dims = SIZE_CLASSES[size];
+  const highlightClasses = highlight
+    ? "ring-2 ring-amber-300 shadow-[0_0_14px_4px_rgba(251,191,36,0.85)] animate-pulse"
+    : "";
 
   if (faceDown || !card) {
     return (
       <div
-        className={`${dims} flex items-center justify-center rounded-md border border-white/10 bg-gradient-to-br from-blue-900 to-slate-950 shadow-md`}
+        className={`${dims} ${highlightClasses} flex items-center justify-center rounded-md border border-white/10 bg-gradient-to-br from-blue-900 to-slate-950 shadow-md`}
       >
         <div className="h-1/2 w-1/2 rounded-sm border border-white/20" />
       </div>
@@ -39,7 +44,9 @@ export function Card({
   const isRed = RED_SUITS.includes(card.suit);
 
   return (
-    <div className={`${dims} flex flex-col items-center justify-center rounded-md border border-gray-300 bg-white shadow-md`}>
+    <div
+      className={`${dims} ${highlightClasses} flex flex-col items-center justify-center rounded-md border border-gray-300 bg-white shadow-md`}
+    >
       <span className={`font-bold leading-tight ${isRed ? "text-chip-red" : "text-chip-black"}`}>
         {card.rank}
       </span>

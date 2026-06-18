@@ -56,7 +56,17 @@ export function PlayerSeat({
   }
 
   return (
-    <div className={`flex flex-col items-center gap-1 ${folded || busted ? "opacity-40" : ""}`}>
+    <div
+      className={`flex flex-col items-center gap-1 rounded-2xl transition-all ${
+        folded || busted ? "opacity-40" : ""
+      } ${isActingSeat ? "scale-110 bg-amber-400/10 p-2 ring-2 ring-amber-300/70" : "p-2"}`}
+    >
+      {isActingSeat && (
+        <div className="rounded-full bg-amber-400 px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-felt-dark shadow-[0_0_10px_3px_rgba(251,191,36,0.8)] animate-bounce">
+          {isMe ? "Your turn" : "Acting"}
+        </div>
+      )}
+
       <div className="flex gap-1">
         {(cardsToShow ?? (holeCards ? [null, null, null] : [])).map((_, i) => (
           <Card
@@ -64,6 +74,7 @@ export function PlayerSeat({
             card={cardsToShow?.[i] ?? undefined}
             faceDown={!showFaceUp || !cardsToShow?.[i]}
             size={isMe ? "md" : "sm"}
+            highlight={isActingSeat}
           />
         ))}
       </div>
@@ -85,7 +96,7 @@ export function PlayerSeat({
       <div
         className={`relative flex h-16 w-16 flex-col items-center justify-center rounded-full border-2 bg-slate-800/90 text-center transition-shadow ${
           isActingSeat
-            ? "border-amber-400 shadow-[0_0_18px_5px_rgba(251,191,36,0.65)]"
+            ? "border-amber-300 shadow-[0_0_24px_8px_rgba(251,191,36,0.9)] animate-pulse"
             : "border-slate-600"
         }`}
       >
