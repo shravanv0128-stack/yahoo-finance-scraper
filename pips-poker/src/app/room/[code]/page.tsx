@@ -16,7 +16,6 @@ import { ShowdownSummary } from "@/components/ShowdownSummary";
 import { LedgerPanel } from "@/components/LedgerPanel";
 import { RunItTwicePrompt } from "@/components/RunItTwicePrompt";
 import { ShowMuckPrompt } from "@/components/ShowMuckPrompt";
-import { ActionTimer } from "@/components/ActionTimer";
 import { CommunityBoard } from "@/components/CommunityBoard";
 import type { BettingAction, ShowDecision } from "@/lib/types";
 
@@ -272,11 +271,6 @@ export default function RoomPage() {
           <p className="text-xs text-white/60">
             Room code: <span className="font-mono">{room.code}</span> &middot; Phase:{" "}
             {gameState?.phase ?? "waiting_room"}
-            {isMyTurn && isBettingPhase && (
-              <>
-                {" "}&middot; Your action: <ActionTimer deadline={gameState?.act_deadline ?? null} />
-              </>
-            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -369,6 +363,8 @@ export default function RoomPage() {
           currentBet={gameState?.current_bet ?? 0}
           pots={gameState?.pots ?? []}
           mySeat={myPlayer?.seat ?? null}
+          actDeadline={gameState?.act_deadline ?? null}
+          actTimeoutSeconds={room.act_timeout_seconds ?? 60}
         />
       </div>
 

@@ -33,6 +33,8 @@ export interface TableProps {
   currentBet: number;
   pots?: { amount: number; label: string }[];
   mySeat: number | null;
+  actDeadline?: string | null;
+  actTimeoutSeconds?: number;
 }
 
 // Returns evenly spaced [x%, y%] positions around an ellipse, starting from
@@ -47,7 +49,17 @@ function ellipsePosition(index: number, total: number): { left: string; top: str
   return { left: `${x}%`, top: `${y}%` };
 }
 
-export function Table({ seats, dealerSeat, communityCards, pot, currentBet, pots, mySeat }: TableProps) {
+export function Table({
+  seats,
+  dealerSeat,
+  communityCards,
+  pot,
+  currentBet,
+  pots,
+  mySeat,
+  actDeadline = null,
+  actTimeoutSeconds = 60,
+}: TableProps) {
   // Rotate the seat order so the viewer's own seat is always index 0
   // (bottom-center), matching PokerNow's "you are always at the bottom".
   const orderedSeats =
@@ -94,6 +106,8 @@ export function Table({ seats, dealerSeat, communityCards, pot, currentBet, pots
               revealedPipTotal={s.revealedPipTotal}
               swappedCount={s.swappedCount}
               communityCards={communityCards}
+              actDeadline={s.isActingSeat ? actDeadline : null}
+              actTimeoutSeconds={actTimeoutSeconds}
             />
           </div>
         );

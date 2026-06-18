@@ -1,5 +1,6 @@
 import type { Card as CardType } from "@/lib/types";
 import { Card } from "./Card";
+import { TurnTimerBar } from "./TurnTimerBar";
 import { evaluateBestHandFlexible, handCategoryLabel } from "@/lib/handEvaluator";
 import { computePipTotal } from "@/lib/pipEvaluator";
 
@@ -17,6 +18,8 @@ export interface PlayerSeatProps {
   revealedPipTotal: number | null;
   swappedCount: number | null;
   communityCards?: CardType[];
+  actDeadline?: string | null;
+  actTimeoutSeconds?: number;
 }
 
 // A single seat around the oval felt table: avatar circle with name, chip
@@ -37,6 +40,8 @@ export function PlayerSeat({
   revealedPipTotal,
   swappedCount,
   communityCards,
+  actDeadline = null,
+  actTimeoutSeconds = 60,
 }: PlayerSeatProps) {
   const cardsToShow = revealedCards ?? (isMe ? holeCards : null);
   const showFaceUp = revealedCards !== null || isMe;
@@ -78,6 +83,12 @@ export function PlayerSeat({
           />
         ))}
       </div>
+
+      {isActingSeat && (
+        <div className="w-full px-0.5">
+          <TurnTimerBar deadline={actDeadline} totalSeconds={actTimeoutSeconds} />
+        </div>
+      )}
 
       {!isMe && !folded && swappedCount !== null && (
         <div className="rounded-full bg-slate-900/90 px-2 py-0.5 text-[10px] font-semibold text-chip-gold shadow ring-1 ring-chip-gold/40">

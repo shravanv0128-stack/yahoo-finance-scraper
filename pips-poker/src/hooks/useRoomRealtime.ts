@@ -64,7 +64,15 @@ export interface RoomGameState {
 }
 
 export interface RoomStateResponse {
-  room: { id: string; code: string; name: string; created_by: string; ante_amount: number; small_bet: number };
+  room: {
+    id: string;
+    code: string;
+    name: string;
+    created_by: string;
+    ante_amount: number;
+    small_bet: number;
+    act_timeout_seconds?: number;
+  };
   players: RoomPlayer[];
   gameState: RoomGameState | null;
   handPlayers: RoomHandPlayer[];
