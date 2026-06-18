@@ -8,6 +8,7 @@ import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";
 import { enforceActTimeout, startNewHand } from "@/lib/gameEngine";
 import { buildSidePots } from "@/lib/bettingEngine";
+import { syncRoomLeader } from "@/lib/roomLeader";
 
 // How long the completed-hand summary stays on screen before the next hand
 // is dealt automatically. Long enough to read who won (and to watch both
@@ -48,6 +49,22 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       .order("seat", { ascending: true });
     if (playersError) throw playersError;
 
+    // Keep host powers (ledger, force-end-stuck-hand, transfer leadership)
+    // pointed at someone with chips: hands off from a busted leader, and
+    // reclaims for the creator once they rebuy. Best-effort; failures here
+    // shouldn't break loading the room.
+    try {
+      const synced = await syncRoomLeader(supabase, roomId);
+      room.leader_id = synced.leaderId;
+      room.leader_auto_assigned = synced.leaderAutoAssigned;
+    } catch {
+      // ignore
+    }
+
+    const eligiblePlayerCount = (players ?? []).filter(
+      (p) => p.is_active && !p.is_away && p.chip_stack > 0
+    ).length;
+
     let { data: gameState } = await supabase
       .from("game_state")
       .select("*")
@@ -83,13 +100,35 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
 
       if (claimed) {
         try {
+          if (eligiblePlayerCount < 2) {
+            // Fewer than two players still have chips (someone busted out
+            // and didn't rebuy in time) - there's nothing to deal, so drop
+            // the table back to the waiting room instead of stalling on the
+            // last showdown summary. Whoever's left can rebuy/take a seat and
+            // the leader (or anyone, once 2+ have chips again) can start hand.
+            throw new Error("Not enough players with chips to deal a new hand");
+          }
           await startNewHand(supabase, roomId);
         } catch {
-          // Not enough active players (e.g. someone went away); roll the
-          // phase back so the creator can start manually.
+          // Not enough active/funded players; reset fully to the waiting
+          // room rather than getting stuck showing the last hand_complete
+          // summary forever.
           await supabase
             .from("game_state")
-            .update({ phase: "hand_complete" })
+            .update({
+              phase: "waiting_room",
+              hand_id: null,
+              community_cards: [],
+              community_cards_2: null,
+              pot: 0,
+              current_bet: 0,
+              min_raise: 0,
+              active_seat: null,
+              act_deadline: null,
+              awaiting_run_it_twice: false,
+              run_it_twice_votes: {},
+              showdown_result: null,
+            })
             .eq("room_id", roomId)
             .eq("phase", "ante");
         }

@@ -31,6 +31,7 @@ export default function RoomPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
 
   useEffect(() => {
     getSession().then((s) => {
@@ -186,6 +187,33 @@ export default function RoomPage() {
     }
   }
 
+  async function handleRebuy() {
+    setActionError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/rooms/rebuy`, { roomId });
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to buy back in");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleTransferLeader(toUserId: string) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/rooms/transfer-leader`, { roomId, toUserId });
+      setShowTransfer(false);
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to transfer leadership");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleToggleAway(away: boolean) {
     setActionError(null);
     setBusy(true);
@@ -224,7 +252,14 @@ export default function RoomPage() {
   const hpBySeat = new Map(handPlayers.map((hp) => [hp.seat, hp]));
   const isHandLive = !!gameState?.hand_id;
 
-  const seats: TableSeatData[] = players.map((p) => {
+  // Busted (chip_stack <= 0) players stay seated so they can rebuy, but once
+  // there's no live hand to show their showdown result in, they drop off the
+  // felt entirely until they buy back in - matching "only people with money
+  // are still in" for the waiting-room view.
+  const visiblePlayers = isHandLive ? players : players.filter((p) => p.chip_stack > 0);
+  const eligiblePlayers = players.filter((p) => p.is_active && !p.is_away && p.chip_stack > 0);
+
+  const seats: TableSeatData[] = visiblePlayers.map((p) => {
     const hp = hpBySeat.get(p.seat);
     const isMe = p.user_id === myUserId;
     return {
@@ -258,10 +293,13 @@ export default function RoomPage() {
     myHandPlayer.status !== "folded" &&
     myHandPlayer.mucked &&
     !myHandPlayer.has_decided_show;
-  const isCreator = !!myUserId && room.created_by === myUserId;
+  const leaderId = room.leader_id ?? room.created_by;
+  const isLeader = !!myUserId && leaderId === myUserId;
   const amInLiveHand = isHandLive && myHandPlayer && myHandPlayer.status !== "folded";
   const canStartHand = !isHandLive || gameState?.phase === "hand_complete";
   const isStuckHand = isHandLive && gameState?.phase !== "hand_complete";
+  const iBusted = amSeated && (myPlayer?.chip_stack ?? 0) <= 0;
+  const transferTargets = players.filter((p) => p.user_id !== leaderId);
 
   return (
     <main className="flex min-h-screen flex-col bg-felt-dark">
@@ -312,14 +350,46 @@ export default function RoomPage() {
           {amSeated && canStartHand && (
             <button
               onClick={handleStart}
-              disabled={busy || players.length < 2}
+              disabled={busy || eligiblePlayers.length < 2}
               className="rounded-full bg-neon px-4 py-2 text-sm font-bold text-felt-dark shadow-neon transition disabled:opacity-40"
             >
               Start hand
             </button>
           )}
+          {isLeader && canStartHand && transferTargets.length > 0 && (
+            <button
+              onClick={() => setShowTransfer((v) => !v)}
+              className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                showTransfer
+                  ? "border-neon bg-neon text-felt-dark shadow-neon"
+                  : "border-white/15 bg-black/40 text-white hover:border-neon/50"
+              }`}
+            >
+              Transfer leadership
+            </button>
+          )}
         </div>
       </header>
+
+      {showTransfer && isLeader && (
+        <div className="mx-auto mt-2 flex w-full max-w-md flex-col gap-2 rounded-lg border border-neon/30 bg-black/60 p-3">
+          <p className="text-center text-xs text-white/60">
+            Hand host powers (ledger, force-end-stuck-hand) to another seated player.
+          </p>
+          <div className="flex flex-col gap-1">
+            {transferTargets.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => handleTransferLeader(p.user_id)}
+                disabled={busy}
+                className="rounded border border-white/15 bg-felt-dark px-3 py-2 text-left text-sm text-white transition hover:border-neon/50 disabled:opacity-40"
+              >
+                {p.display_name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {actionError && (
         <p className="mx-auto mt-2 rounded bg-chip-red/20 px-4 py-1 text-sm text-chip-red">{actionError}</p>
@@ -335,9 +405,24 @@ export default function RoomPage() {
             buyIn: p.buy_in,
           }))}
           disabled={busy}
-          canEdit={isCreator && canStartHand}
+          canEdit={isLeader && canStartHand}
           onAdjust={handleLedgerAdjust}
         />
+      )}
+
+      {iBusted && (
+        <div className="mx-auto mt-4 flex w-full max-w-sm flex-col items-center gap-2 rounded-lg border border-chip-gold/40 bg-felt p-3">
+          <p className="text-center text-xs text-white/70">
+            You're out of chips. Buy back in to get dealt into the next hand.
+          </p>
+          <button
+            onClick={handleRebuy}
+            disabled={busy}
+            className="rounded bg-chip-gold px-4 py-2 text-xs font-semibold text-felt-dark disabled:opacity-40"
+          >
+            Buy back in (${room.starting_stack ?? 1000})
+          </button>
+        </div>
       )}
 
       {!amSeated && sessionLoaded && !session && (
@@ -450,7 +535,7 @@ export default function RoomPage() {
       )}
 
 
-      {isCreator && isStuckHand && (
+      {isLeader && isStuckHand && (
         <div className="mx-auto mt-4 flex w-full max-w-md flex-col items-center gap-2 rounded-lg border border-chip-red/40 bg-felt p-3">
           <p className="text-center text-xs text-felt-light/80">
             Hand stuck? This refunds everyone's chips for the current hand and lets you start a new one.

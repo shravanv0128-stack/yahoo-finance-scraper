@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";
 import { forceEndHand } from "@/lib/gameEngine";
+import { syncRoomLeader } from "@/lib/roomLeader";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,14 +25,15 @@ export async function POST(req: NextRequest) {
 
     const { data: room, error: roomError } = await supabase
       .from("rooms")
-      .select("created_by")
+      .select("id")
       .eq("id", roomId)
       .single();
     if (roomError || !room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
-    if (room.created_by !== user.id) {
-      return NextResponse.json({ error: "Only the room creator can force-end a stuck hand" }, { status: 403 });
+    const { leaderId } = await syncRoomLeader(supabase, roomId);
+    if (leaderId !== user.id) {
+      return NextResponse.json({ error: "Only the room leader can force-end a stuck hand" }, { status: 403 });
     }
 
     const { data: gameState, error: gsError } = await supabase

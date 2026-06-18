@@ -69,8 +69,10 @@ export interface RoomStateResponse {
     code: string;
     name: string;
     created_by: string;
+    leader_id?: string | null;
     ante_amount: number;
     small_bet: number;
+    starting_stack?: number;
     act_timeout_seconds?: number;
     max_players?: number;
   };

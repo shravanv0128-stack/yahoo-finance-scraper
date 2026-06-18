@@ -1,11 +1,14 @@
 // POST /api/rooms/ledger - adjust a seated player's chip_stack by a delta
-// (positive to add, negative to subtract). Restricted to the room creator
-// only (rooms.created_by), since this directly mints/burns chips outside
-// normal gameplay. Cannot be used while that player is mid-hand (hand_players
-// snapshots a separate chip_stack that would otherwise drift out of sync).
+// (positive to add, negative to subtract). Restricted to the current room
+// leader (rooms.leader_id, which normally tracks the creator but can fail
+// over/transfer - see src/lib/roomLeader.ts), since this directly mints/burns
+// chips outside normal gameplay. Cannot be used while that player is mid-hand
+// (hand_players snapshots a separate chip_stack that would otherwise drift
+// out of sync).
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";
+import { syncRoomLeader } from "@/lib/roomLeader";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,14 +26,15 @@ export async function POST(req: NextRequest) {
 
     const { data: room, error: roomError } = await supabase
       .from("rooms")
-      .select("created_by")
+      .select("id")
       .eq("id", body.roomId)
       .single();
     if (roomError || !room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
-    if (room.created_by !== user.id) {
-      return NextResponse.json({ error: "Only the room creator can adjust stacks" }, { status: 403 });
+    const { leaderId } = await syncRoomLeader(supabase, body.roomId);
+    if (leaderId !== user.id) {
+      return NextResponse.json({ error: "Only the room leader can adjust stacks" }, { status: 403 });
     }
 
     const { data: gameState } = await supabase

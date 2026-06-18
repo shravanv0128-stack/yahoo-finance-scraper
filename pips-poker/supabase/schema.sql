@@ -15,6 +15,17 @@ create table if not exists rooms (
   code text not null unique,
   name text not null,
   created_by uuid not null,
+  -- The user currently holding host powers (ledger edits, force-end-stuck-
+  -- hand, transferring leadership). Defaults to created_by; automatically
+  -- hands off to the highest-stack active player if the creator busts, and
+  -- automatically reverts back to the creator once they rebuy. Can also be
+  -- delegated manually via the "Transfer leadership" control.
+  leader_id uuid,
+  -- True when leader_id was set by the bust-failover above (so a later
+  -- creator rebuy should reclaim leadership); false for the creator's normal
+  -- standing or an explicit manual transfer, which stick until the leader
+  -- themself busts/leaves.
+  leader_auto_assigned boolean not null default false,
   -- Monetary columns use numeric(10,2) (decimal dollars), not integer, so
   -- that fractional values like the $0.50 bomb-pot ante are stored exactly
   -- (an integer column would truncate 0.5 to 0). gameEngine.ts works in
@@ -209,3 +220,7 @@ alter table game_state add column if not exists community_cards_2 jsonb;
 -- alter table rooms add column if not exists allow_run_it_twice boolean not null default true;
 -- Run this once to show "X swapped N cards" bubbles during draw_swap:
 -- alter table hand_players add column if not exists swapped_count integer;
+-- Run this once to add room-leader failover/transfer support:
+-- alter table rooms add column if not exists leader_id uuid;
+-- alter table rooms add column if not exists leader_auto_assigned boolean not null default false;
+-- update rooms set leader_id = created_by where leader_id is null;
