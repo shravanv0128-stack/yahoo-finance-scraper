@@ -366,7 +366,7 @@ export default function RoomPage() {
               Start hand
             </button>
           )}
-          {isLeader && canStartHand && transferTargets.length > 0 && (
+          {isLeader && transferTargets.length > 0 && (
             <button
               onClick={() => setShowTransfer((v) => !v)}
               className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
@@ -415,7 +415,7 @@ export default function RoomPage() {
             buyIn: p.buy_in,
           }))}
           disabled={busy}
-          canEdit={isLeader && canStartHand}
+          canEdit={isLeader}
           onAdjust={handleLedgerAdjust}
         />
       )}
