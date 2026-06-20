@@ -152,6 +152,17 @@ create table if not exists actions (
   created_at timestamptz not null default now()
 );
 
+-- Free-text table chat. Independent of hands so messages persist across the
+-- whole room's lifetime, not just one hand.
+create table if not exists chat_messages (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid not null references rooms(id) on delete cascade,
+  user_id uuid not null,
+  display_name text not null,
+  message text not null,
+  created_at timestamptz not null default now()
+);
+
 alter table rooms enable row level security;
 alter table players enable row level security;
 alter table hands enable row level security;
@@ -159,6 +170,7 @@ alter table hand_players enable row level security;
 alter table hole_cards enable row level security;
 alter table game_state enable row level security;
 alter table actions enable row level security;
+alter table chat_messages enable row level security;
 
 -- Public, read-only metadata for anyone signed in.
 create policy "rooms readable by authenticated users" on rooms for select using (auth.role() = 'authenticated');
@@ -167,6 +179,12 @@ create policy "hands readable by authenticated users" on hands for select using 
 create policy "hand_players readable by authenticated users" on hand_players for select using (auth.role() = 'authenticated');
 create policy "game_state readable by authenticated users" on game_state for select using (auth.role() = 'authenticated');
 create policy "actions readable by authenticated users" on actions for select using (auth.role() = 'authenticated');
+create policy "chat readable by authenticated users" on chat_messages for select using (auth.role() = 'authenticated');
+
+-- Players send chat as themselves; the server (service role) inserts on
+-- their behalf after checking they're seated in the room.
+create policy "users send their own chat messages" on chat_messages
+  for insert with check (auth.uid() = user_id);
 
 -- Hole cards are private: only the owning user can read their own row.
 -- The server bypasses this with the service-role key to deal cards and to
@@ -191,6 +209,7 @@ create index if not exists hands_room_id_idx on hands (room_id);
 create index if not exists hand_players_hand_id_idx on hand_players (hand_id);
 create index if not exists hole_cards_hand_id_idx on hole_cards (hand_id);
 create index if not exists actions_hand_id_idx on actions (hand_id);
+create index if not exists chat_messages_room_id_idx on chat_messages (room_id);
 
 -- ============================================================================
 -- Realtime: enable postgres_changes broadcasts for the tables the client
@@ -201,6 +220,7 @@ create index if not exists actions_hand_id_idx on actions (hand_id);
 alter publication supabase_realtime add table game_state;
 alter publication supabase_realtime add table hand_players;
 alter publication supabase_realtime add table actions;
+alter publication supabase_realtime add table chat_messages;
 
 -- ============================================================================
 -- Migration: run this block against an existing database that was created
@@ -224,3 +244,17 @@ alter table game_state add column if not exists community_cards_2 jsonb;
 -- alter table rooms add column if not exists leader_id uuid;
 -- alter table rooms add column if not exists leader_auto_assigned boolean not null default false;
 -- update rooms set leader_id = created_by where leader_id is null;
+-- Run this once to add the table chat feature:
+-- create table if not exists chat_messages (
+--   id uuid primary key default gen_random_uuid(),
+--   room_id uuid not null references rooms(id) on delete cascade,
+--   user_id uuid not null,
+--   display_name text not null,
+--   message text not null,
+--   created_at timestamptz not null default now()
+-- );
+-- alter table chat_messages enable row level security;
+-- create policy "chat readable by authenticated users" on chat_messages for select using (auth.role() = 'authenticated');
+-- create policy "users send their own chat messages" on chat_messages for insert with check (auth.uid() = user_id);
+-- create index if not exists chat_messages_room_id_idx on chat_messages (room_id);
+-- alter publication supabase_realtime add table chat_messages;

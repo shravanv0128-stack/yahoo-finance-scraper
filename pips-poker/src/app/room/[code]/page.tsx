@@ -17,6 +17,7 @@ import { LedgerPanel } from "@/components/LedgerPanel";
 import { RunItTwicePrompt } from "@/components/RunItTwicePrompt";
 import { ShowMuckPrompt } from "@/components/ShowMuckPrompt";
 import { CommunityBoard } from "@/components/CommunityBoard";
+import { ChatPanel } from "@/components/ChatPanel";
 import type { BettingAction, ShowDecision } from "@/lib/types";
 
 const BETTING_PHASES = new Set(["flop_betting", "turn_betting", "river_betting"]);
@@ -243,9 +244,18 @@ export default function RoomPage() {
     );
   }
 
+  async function handleSendChat(message: string) {
+    try {
+      await authedFetch(`/api/rooms/chat`, { roomId, message });
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to send message");
+    }
+  }
+
   if (!data) return null;
 
-  const { room, players, gameState, handPlayers, myHoleCards, myUserId } = data;
+  const { room, players, gameState, handPlayers, myHoleCards, myUserId, chatMessages } = data;
   const myPlayer = players.find((p) => p.user_id === myUserId);
   const amSeated = !!myPlayer;
 
@@ -483,19 +493,27 @@ export default function RoomPage() {
         </div>
       )}
 
-      {isMyTurn && isBettingPhase && myHandPlayer && (
-        <BettingControls
-          toCall={toCall}
-          chipStack={myHandPlayer.chip_stack}
-          pot={gameState?.pot ?? 0}
-          disabled={busy}
-          onAction={handleAction}
-        />
-      )}
+      {amSeated && (
+        <div className="flex w-full flex-col gap-3 border-t-2 border-neon/30 bg-slate-950/80 px-4 py-3 sm:flex-row sm:items-stretch">
+          <ChatPanel messages={chatMessages} myUserId={myUserId} disabled={busy} onSend={handleSendChat} />
 
-      {isSwapPhase && myHandPlayer && myHandPlayer.status === "active" && !myHandPlayer.has_swapped && myHoleCards && (
-        <div className="flex justify-center border-t border-white/10 bg-slate-900/95 px-4 py-3">
-          <DrawSwapControls holeCards={myHoleCards} disabled={busy} onSwap={handleSwap} />
+          <div className="flex-1">
+            {isMyTurn && isBettingPhase && myHandPlayer && (
+              <BettingControls
+                toCall={toCall}
+                chipStack={myHandPlayer.chip_stack}
+                pot={gameState?.pot ?? 0}
+                disabled={busy}
+                onAction={handleAction}
+              />
+            )}
+
+            {isSwapPhase && myHandPlayer && myHandPlayer.status === "active" && !myHandPlayer.has_swapped && myHoleCards && (
+              <div className="flex h-full items-center justify-center">
+                <DrawSwapControls holeCards={myHoleCards} disabled={busy} onSwap={handleSwap} />
+              </div>
+            )}
+          </div>
         </div>
       )}
 

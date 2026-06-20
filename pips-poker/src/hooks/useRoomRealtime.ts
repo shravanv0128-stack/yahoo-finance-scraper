@@ -63,6 +63,14 @@ export interface RoomGameState {
   hand_id: string | null;
 }
 
+export interface RoomChatMessage {
+  id: string;
+  user_id: string;
+  display_name: string;
+  message: string;
+  created_at: string;
+}
+
 export interface RoomStateResponse {
   room: {
     id: string;
@@ -81,6 +89,7 @@ export interface RoomStateResponse {
   handPlayers: RoomHandPlayer[];
   myHoleCards: Card[] | null;
   myUserId: string;
+  chatMessages: RoomChatMessage[];
 }
 
 const POLL_MS = 2500;
@@ -125,6 +134,11 @@ export function useRoomRealtime(roomId: string) {
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "hand_players" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "actions" }, refresh)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "chat_messages", filter: `room_id=eq.${roomId}` },
+        refresh
+      )
       .subscribe();
 
     return () => {

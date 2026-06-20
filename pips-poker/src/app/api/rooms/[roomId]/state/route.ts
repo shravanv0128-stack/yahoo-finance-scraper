@@ -210,6 +210,13 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
         }
       : null;
 
+    const { data: chatMessages } = await supabase
+      .from("chat_messages")
+      .select("id, user_id, display_name, message, created_at")
+      .eq("room_id", roomId)
+      .order("created_at", { ascending: true })
+      .limit(50);
+
     return NextResponse.json({
       room,
       players,
@@ -217,6 +224,7 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       handPlayers,
       myHoleCards,
       myUserId: user.id,
+      chatMessages: chatMessages ?? [],
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";
