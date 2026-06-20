@@ -14,6 +14,10 @@ import { syncRoomLeader } from "@/lib/roomLeader";
 // is dealt automatically. Long enough to read who won (and to watch both
 // boards when the hand was run twice).
 const AUTO_NEXT_HAND_MS = 6000;
+// Hands that were run it twice show two boards in sequence (see revealStage
+// in the room page) and a more involved showdown breakdown, so they get
+// extra time on screen before the table auto-advances.
+const AUTO_NEXT_HAND_MS_RUN_TWICE = 13000;
 
 export async function GET(req: NextRequest, { params }: { params: { roomId: string } }) {
   try {
@@ -49,8 +53,8 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       .order("seat", { ascending: true });
     if (playersError) throw playersError;
 
-    // Keep host powers (ledger, force-end-stuck-hand, transfer leadership)
-    // pointed at someone with chips: hands off from a busted leader, and
+    // Keep host powers (ledger, transfer leadership) pointed at someone
+    // with chips: hands off from a busted leader, and
     // reclaims for the creator once they rebuy. Best-effort; failures here
     // shouldn't break loading the room.
     try {
@@ -79,10 +83,13 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
     // the poll (not a client setTimeout) so it fires even on backgrounded
     // tabs. Best-effort: if it races or there aren't enough active players,
     // it's safely ignored and the owner can still start manually.
+    const autoNextHandMs = gameState?.showdown_result?.ranItTwice
+      ? AUTO_NEXT_HAND_MS_RUN_TWICE
+      : AUTO_NEXT_HAND_MS;
     if (
       gameState?.phase === "hand_complete" &&
       gameState.updated_at &&
-      Date.now() - new Date(gameState.updated_at).getTime() >= AUTO_NEXT_HAND_MS
+      Date.now() - new Date(gameState.updated_at).getTime() >= autoNextHandMs
     ) {
       // Atomically "claim" the right to deal the next hand by flipping the
       // phase off "hand_complete" with a conditional update. Postgres

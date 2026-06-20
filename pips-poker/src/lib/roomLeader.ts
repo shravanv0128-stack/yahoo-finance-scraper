@@ -1,5 +1,5 @@
 // Keeps rooms.leader_id (who currently holds host powers - ledger edits,
-// force-end-stuck-hand, transferring leadership) in sync with players
+// transferring leadership) in sync with players
 // busting/rebuying:
 //  - If the current leader no longer has chips (or left/went away), hand off
 //    to the room creator if they're eligible, otherwise to whoever has the

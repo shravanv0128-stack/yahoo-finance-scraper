@@ -21,15 +21,15 @@ export function DrawSwapControls({ holeCards, disabled, onSwap }: DrawSwapContro
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-felt-light/40 bg-felt p-4">
-      <p className="text-xs text-felt-light">Select cards to discard, then swap (or stand pat).</p>
+    <div className="flex h-full w-full flex-col items-center justify-center gap-3 rounded-lg border border-neon/40 bg-gradient-to-b from-emerald-950/90 to-slate-900/90 px-4 py-3 shadow-[0_0_20px_2px_rgba(57,255,140,0.15)]">
+      <p className="text-xs text-white/70">Select cards to discard, then swap (or stand pat).</p>
       <div className="flex gap-2">
         {holeCards.map((card, i) => (
           <button
             key={i}
             disabled={disabled}
             onClick={() => toggle(i)}
-            className={`rounded ${selected.has(i) ? "ring-2 ring-chip-gold" : ""}`}
+            className={`rounded transition ${selected.has(i) ? "ring-2 ring-chip-gold" : ""}`}
           >
             <Card card={card} />
           </button>
@@ -39,14 +39,14 @@ export function DrawSwapControls({ holeCards, disabled, onSwap }: DrawSwapContro
         <button
           disabled={disabled}
           onClick={() => onSwap([])}
-          className="rounded bg-felt-light px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
+          className="rounded bg-slate-600 px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
         >
           Stand pat
         </button>
         <button
           disabled={disabled || selected.size === 0}
           onClick={() => onSwap(Array.from(selected))}
-          className="rounded bg-chip-gold px-3 py-2 text-sm font-semibold text-felt-dark disabled:opacity-40"
+          className="rounded bg-chip-gold px-3 py-2 text-sm font-semibold text-felt-dark transition hover:brightness-110 disabled:opacity-40"
         >
           Swap selected
         </button>

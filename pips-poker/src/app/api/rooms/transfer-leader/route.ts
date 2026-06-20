@@ -1,7 +1,7 @@
 // POST /api/rooms/transfer-leader - lets the current room leader hand host
-// powers (ledger edits, force-end-stuck-hand, future transfers) to another
-// seated player. See src/lib/roomLeader.ts for how this interacts with the
-// automatic creator-busts/rebuys failover.
+// powers (ledger edits, future transfers) to another seated player. See
+// src/lib/roomLeader.ts for how this interacts with the automatic
+// creator-busts/rebuys failover.
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/auth";

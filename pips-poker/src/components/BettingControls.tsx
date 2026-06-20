@@ -27,7 +27,7 @@ export function BettingControls({ toCall, chipStack, pot, disabled, onAction }: 
   const fullPot = maxBet;
 
   return (
-    <div className="flex w-full flex-col gap-3 border-t-2 border-neon/50 bg-gradient-to-b from-emerald-950/95 to-slate-900/95 px-4 py-3 shadow-[0_-4px_24px_rgba(57,255,140,0.18)] sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex w-full flex-col gap-3 rounded-lg border border-neon/40 bg-gradient-to-b from-emerald-950/90 to-slate-900/90 px-4 py-3 shadow-[0_0_20px_2px_rgba(57,255,140,0.15)] sm:flex-row sm:items-center sm:justify-between">
       <div className="flex gap-2">
         <button
           disabled={disabled}

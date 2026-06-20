@@ -162,19 +162,6 @@ export default function RoomPage() {
     }
   }
 
-  async function handleAbortHand() {
-    setActionError(null);
-    setBusy(true);
-    try {
-      await authedFetch(`/api/hands/abort`, { roomId });
-      await refresh();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Failed to end stuck hand");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function handleLedgerAdjust(playerId: string, delta: number) {
     setActionError(null);
     setBusy(true);
@@ -307,7 +294,6 @@ export default function RoomPage() {
   const isLeader = !!myUserId && leaderId === myUserId;
   const amInLiveHand = isHandLive && myHandPlayer && myHandPlayer.status !== "folded";
   const canStartHand = !isHandLive || gameState?.phase === "hand_complete";
-  const isStuckHand = isHandLive && gameState?.phase !== "hand_complete";
   const iBusted = amSeated && (myPlayer?.chip_stack ?? 0) <= 0;
   const transferTargets = players.filter((p) => p.user_id !== leaderId);
 
@@ -384,7 +370,7 @@ export default function RoomPage() {
       {showTransfer && isLeader && (
         <div className="mx-auto mt-2 flex w-full max-w-md flex-col gap-2 rounded-lg border border-neon/30 bg-black/60 p-3">
           <p className="text-center text-xs text-white/60">
-            Hand host powers (ledger, force-end-stuck-hand) to another seated player.
+            Hand host powers (ledger edits) to another seated player.
           </p>
           <div className="flex flex-col gap-1">
             {transferTargets.map((p) => (
@@ -465,7 +451,7 @@ export default function RoomPage() {
         </div>
       )}
 
-      <div className="flex flex-1 items-center justify-center px-4 py-6">
+      <div className="flex flex-1 items-center justify-center px-4 py-6 pb-24">
         <Table
           seats={seats}
           dealerSeat={gameState?.dealer_seat ?? 0}
@@ -494,10 +480,10 @@ export default function RoomPage() {
       )}
 
       {amSeated && (
-        <div className="flex w-full flex-col gap-3 border-t-2 border-neon/30 bg-slate-950/80 px-4 py-3 sm:flex-row sm:items-stretch">
+        <div className="flex w-full flex-col items-stretch gap-3 border-t border-white/10 bg-black/40 px-4 py-3 sm:flex-row">
           <ChatPanel messages={chatMessages} myUserId={myUserId} disabled={busy} onSend={handleSendChat} />
 
-          <div className="flex-1">
+          <div className="flex flex-1 items-stretch">
             {isMyTurn && isBettingPhase && myHandPlayer && (
               <BettingControls
                 toCall={toCall}
@@ -509,9 +495,7 @@ export default function RoomPage() {
             )}
 
             {isSwapPhase && myHandPlayer && myHandPlayer.status === "active" && !myHandPlayer.has_swapped && myHoleCards && (
-              <div className="flex h-full items-center justify-center">
-                <DrawSwapControls holeCards={myHoleCards} disabled={busy} onSwap={handleSwap} />
-              </div>
+              <DrawSwapControls holeCards={myHoleCards} disabled={busy} onSwap={handleSwap} />
             )}
           </div>
         </div>
@@ -547,25 +531,11 @@ export default function RoomPage() {
       )}
 
       {gameState?.phase === "hand_complete" && (
-        <p className="mx-auto mt-2 text-center text-xs text-felt-light/70">
-          Next hand starts automatically in a few seconds...
+        <p className="mx-auto mt-2 text-center text-xs text-white/50">
+          {gameState.showdown_result?.ranItTwice
+            ? "Next hand starts automatically in a bit, once both boards have been shown..."
+            : "Next hand starts automatically in a few seconds..."}
         </p>
-      )}
-
-
-      {isLeader && isStuckHand && (
-        <div className="mx-auto mt-4 flex w-full max-w-md flex-col items-center gap-2 rounded-lg border border-chip-red/40 bg-felt p-3">
-          <p className="text-center text-xs text-felt-light/80">
-            Hand stuck? This refunds everyone's chips for the current hand and lets you start a new one.
-          </p>
-          <button
-            onClick={handleAbortHand}
-            disabled={busy}
-            className="rounded bg-chip-red px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
-          >
-            Force-end stuck hand (refund pot)
-          </button>
-        </div>
       )}
     </main>
   );

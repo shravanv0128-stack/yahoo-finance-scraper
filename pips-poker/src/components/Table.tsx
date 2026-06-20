@@ -42,8 +42,8 @@ export interface TableProps {
 function ellipsePosition(index: number, total: number): { left: string; top: string } {
   const angleStep = (2 * Math.PI) / total;
   const angle = Math.PI / 2 + index * angleStep; // start at bottom, go clockwise
-  const rx = 46; // % of width
-  const ry = 40; // % of height
+  const rx = 44; // % of width
+  const ry = 34; // % of height
   const x = 50 + rx * Math.cos(angle);
   const y = 50 + ry * Math.sin(angle);
   return { left: `${x}%`, top: `${y}%` };
