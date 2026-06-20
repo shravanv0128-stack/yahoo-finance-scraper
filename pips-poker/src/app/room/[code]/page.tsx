@@ -502,21 +502,21 @@ export default function RoomPage() {
             {isSwapPhase && myHandPlayer && myHandPlayer.status === "active" && !myHandPlayer.has_swapped && myHoleCards && (
               <DrawSwapControls holeCards={myHoleCards} disabled={busy} onSwap={handleSwap} />
             )}
+
+            {isRunTwicePending && amInLiveHand && myHandPlayer && (
+              <RunItTwicePrompt
+                disabled={busy}
+                hasVoted={!!gameState?.run_it_twice_votes?.[myHandPlayer.id]}
+                votesIn={Object.values(gameState?.run_it_twice_votes ?? {}).filter(Boolean).length}
+                votesNeeded={handPlayers.filter((hp) => hp.status !== "folded").length}
+                onChoose={handleRunTwice}
+              />
+            )}
+
+            {canOfferShow && <ShowMuckPrompt disabled={busy} onChoose={handleShowDecision} />}
           </div>
         </div>
       )}
-
-      {isRunTwicePending && amInLiveHand && myHandPlayer && (
-        <RunItTwicePrompt
-          disabled={busy}
-          hasVoted={!!gameState?.run_it_twice_votes?.[myHandPlayer.id]}
-          votesIn={Object.values(gameState?.run_it_twice_votes ?? {}).filter(Boolean).length}
-          votesNeeded={handPlayers.filter((hp) => hp.status !== "folded").length}
-          onChoose={handleRunTwice}
-        />
-      )}
-
-      {canOfferShow && <ShowMuckPrompt disabled={busy} onChoose={handleShowDecision} />}
 
       {gameState?.phase === "hand_complete" && (
         <ShowdownSummary

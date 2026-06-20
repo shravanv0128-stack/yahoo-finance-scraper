@@ -14,13 +14,13 @@ export function RunItTwicePrompt({
   onChoose: (runTwice: boolean) => void;
 }) {
   return (
-    <div className="mx-auto mt-4 flex w-full max-w-md flex-col items-center gap-3 rounded-lg border border-chip-gold/40 bg-felt p-4">
-      <p className="text-center text-sm font-semibold text-white">
-        Everyone's all-in. Run it twice splits the pot 50/50 between two boards - it only happens if
-        every player agrees; one "run it once" vote settles it immediately.
+    <div className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-chip-gold/40 bg-gradient-to-b from-emerald-950/90 to-slate-900/90 px-4 py-3 text-center shadow-[0_0_20px_2px_rgba(251,191,36,0.15)]">
+      <p className="text-xs text-white/80">
+        Everyone's all-in. Run it twice to split the pot 50/50 across two boards — needs everyone to
+        agree; one "run it once" vote settles it now.
       </p>
       {hasVoted ? (
-        <p className="text-center text-xs italic text-felt-light/70">
+        <p className="text-center text-xs italic text-white/60">
           Waiting on the rest of the table ({votesIn}/{votesNeeded} agreed to run it twice)...
         </p>
       ) : (
@@ -28,14 +28,14 @@ export function RunItTwicePrompt({
           <button
             disabled={disabled}
             onClick={() => onChoose(false)}
-            className="rounded bg-slate-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+            className="rounded bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
           >
             Run it once
           </button>
           <button
             disabled={disabled}
             onClick={() => onChoose(true)}
-            className="rounded bg-chip-gold px-4 py-2 text-sm font-semibold text-felt-dark disabled:opacity-40"
+            className="rounded bg-chip-gold px-4 py-2 text-sm font-semibold text-felt-dark transition hover:brightness-110 disabled:opacity-40"
           >
             Run it twice
           </button>
