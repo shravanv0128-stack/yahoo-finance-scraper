@@ -34,7 +34,7 @@ function BoardCards({ cards }: { cards: CardType[] }) {
   return (
     <div className="flex justify-center gap-1">
       {cards.map((c, j) => (
-        <Card key={j} card={c} size="sm" faceDown={j >= revealedCount} />
+        <Card key={j} card={c} size="md" faceDown={j >= revealedCount} />
       ))}
     </div>
   );
@@ -105,13 +105,16 @@ export function ShowdownSummary({
   const shown = players.filter((p) => !p.folded && p.revealedCards);
   const boards = result?.boards ?? [];
   const boardsToShow = boards.slice(0, Math.max(1, visibleBoards));
-  const flopLength = sharedPrefixLength(boardsToShow);
-  const sharedFlop = boardsToShow[0]?.communityCards.slice(0, flopLength) ?? [];
+  // The shared-flop split only makes sense once there are two boards to
+  // compare (a run-it-twice hand); for a normal single-board hand every
+  // community card should still animate in one by one.
+  const flopLength = result?.ranItTwice ? sharedPrefixLength(boards) : 0;
+  const sharedFlop = boards[0]?.communityCards.slice(0, flopLength) ?? [];
 
   if (boards.length === 0 && shown.length === 0) return null;
 
   return (
-    <div className="mx-auto flex max-h-full w-full max-w-2xl flex-col gap-2 overflow-y-auto rounded-lg border border-chip-gold/40 bg-felt p-4">
+    <div className="mx-auto flex max-h-full w-full max-w-3xl flex-col gap-2 overflow-y-auto rounded-lg border border-chip-gold/40 bg-felt p-5">
       <h2 className="mb-1 text-center text-sm font-semibold uppercase tracking-wide text-chip-gold">
         {result?.ranItTwice ? "Showdown · Run it twice" : "Showdown"}
       </h2>
@@ -119,53 +122,55 @@ export function ShowdownSummary({
       {/* Shared flop cards in a row, shown once face-up with no animation;
           each board's differing turn/river cards fan out at an angle to the
           right of the flop — board 1 above, board 2 below — like a split
-          board on a real table. */}
+          board on a real table. Always rendered (even before board 2 is
+          revealed) so board 1's reveal animation never restarts partway
+          through; board 2's fan simply mounts later, once visibleBoards
+          allows it, so board 1 finishes its run-out first. */}
       {sharedFlop.length > 0 && (
-        <div className="flex items-center justify-center py-2">
-          <div className="flex gap-1">
+        <div className="flex items-center justify-center py-3">
+          <div className="flex gap-1.5">
             {sharedFlop.map((c, j) => (
-              <Card key={j} card={c} size="sm" />
+              <Card key={j} card={c} size="md" />
             ))}
           </div>
-          {boardsToShow.length > 1 && (
-            <div className="relative ml-2 h-12 w-16">
-              {boardsToShow.map((b, i) => {
-                const differingCards = b.communityCards.slice(flopLength);
-                if (differingCards.length === 0) return null;
-                const isFirst = i === 0;
-                return (
-                  <div
-                    key={`${handId ?? "hand"}-fan-${i}`}
-                    className={`absolute left-0 flex gap-0.5 ${
-                      isFirst ? "-top-4 rotate-[-10deg]" : "top-4 rotate-[10deg]"
-                    } ${i === boardsToShow.length - 1 ? "animate-fadein" : ""}`}
-                  >
-                    <BoardCards key={`${handId ?? "hand"}-cards-${i}`} cards={differingCards} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div className="relative ml-3 h-20 w-28">
+            {boardsToShow.map((b, i) => {
+              const differingCards = b.communityCards.slice(flopLength);
+              if (differingCards.length === 0) return null;
+              const isFirst = i === 0;
+              return (
+                <div
+                  key={`${handId ?? "hand"}-fan-${i}`}
+                  className={`absolute left-0 flex gap-1 ${
+                    isFirst ? "-top-6 rotate-[-10deg]" : "top-6 rotate-[10deg]"
+                  } ${i === boardsToShow.length - 1 ? "animate-fadein" : ""}`}
+                >
+                  <BoardCards key={`${handId ?? "hand"}-cards-${i}`} cards={differingCards} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Normal (non-run-it-twice) hand: no shared flop split, just the
+          full community board animating in one card at a time. */}
+      {!result?.ranItTwice && boards[0]?.communityCards.length > 0 && (
+        <div className="flex justify-center py-3">
+          <BoardCards key={`${handId ?? "hand"}-cards-0`} cards={boards[0].communityCards} />
         </div>
       )}
 
       {boardsToShow.map((b, i) => {
-        const isOnlyBoard = boardsToShow.length === 1;
-        const differingCards = isOnlyBoard ? b.communityCards.slice(flopLength) : [];
         return (
           <div
             key={`${handId ?? "hand"}-${i}`}
-            className={`rounded-md bg-felt-dark/60 p-2.5 ${i === boardsToShow.length - 1 ? "animate-fadein" : ""}`}
+            className={`rounded-md bg-felt-dark/60 p-3 ${i === boardsToShow.length - 1 ? "animate-fadein" : ""}`}
           >
             {result?.ranItTwice && (
               <p className="mb-1.5 text-center text-[10px] font-bold uppercase tracking-wide text-chip-gold">
                 Board {i + 1}
               </p>
-            )}
-            {isOnlyBoard && differingCards.length > 0 && (
-              <div className="mb-2">
-                <BoardCards key={`${handId ?? "hand"}-cards-${i}`} cards={differingCards} />
-              </div>
             )}
 
             {result?.uncontested ? (
@@ -174,23 +179,23 @@ export function ShowdownSummary({
               </p>
             ) : (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div className="rounded bg-black/30 px-3 py-1.5">
-                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-amber-300">
+                <div className="rounded bg-black/30 px-3 py-2">
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-300">
                     🂡 Best poker hand
                   </p>
                   {groupWinners(b.pokerWinners, (w) => w.handLabel).map((g, j) => (
-                    <p key={j} className="text-xs text-white">
+                    <p key={j} className="text-sm text-white">
                       <span className="font-semibold">{joinNames(g.displayNames)}</span>
                       <span className="text-white/50"> — {g.key}</span>
                     </p>
                   ))}
                 </div>
-                <div className="rounded bg-black/30 px-3 py-1.5">
-                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-chip-blue">
+                <div className="rounded bg-black/30 px-3 py-2">
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-chip-blue">
                     ◆ Highest pips
                   </p>
                   {groupWinners(b.pipWinners, (w) => `${w.pipTotal} pips`).map((g, j) => (
-                    <p key={j} className="text-xs text-white">
+                    <p key={j} className="text-sm text-white">
                       <span className="font-semibold">{joinNames(g.displayNames)}</span>
                       <span className="text-white/50"> — {g.key}</span>
                     </p>
@@ -213,12 +218,12 @@ export function ShowdownSummary({
             {shown.map((p) => (
               <div
                 key={p.seat}
-                className={`flex items-center justify-between rounded-md px-3 py-1.5 ${
+                className={`flex items-center justify-between rounded-md px-3 py-2 ${
                   p.amountWon > 0 ? "bg-emerald-900/40 ring-1 ring-chip-gold/60" : "bg-felt-dark/60"
                 }`}
               >
                 <div>
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-base font-semibold text-white">
                     {p.displayName}
                     {p.amountWon > 0 && <span className="ml-2 text-chip-gold">+${p.amountWon}</span>}
                   </p>
@@ -229,7 +234,7 @@ export function ShowdownSummary({
                 </div>
                 <div className="flex gap-1">
                   {(p.revealedCards ?? []).map((c, i) => (
-                    <Card key={i} card={c} size="sm" />
+                    <Card key={i} card={c} size="md" />
                   ))}
                 </div>
               </div>
