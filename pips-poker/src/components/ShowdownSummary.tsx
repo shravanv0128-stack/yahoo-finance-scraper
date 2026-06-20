@@ -9,9 +9,10 @@ import { Card } from "./Card";
 //     half, one section per board so "run it twice" is easy to follow), and
 //  2) the reveal of each player's hole cards + pip total.
 // When a hand was run twice, the parent reveals boards one at a time via
-// `visibleBoards` so the two run-outs are understandable in sequence, and
-// each board's own cards flip face-up one by one (see BoardCards below) for
-// suspense.
+// `visibleBoards`: board 1 stays on screen and board 2 fades in directly
+// beneath it once it's ready, so both run-outs can be compared side by
+// side, and each board's own cards flip face-up one by one (see BoardCards
+// below) for suspense.
 
 const BOARD_CARD_STAGGER_MS = 2000;
 
@@ -64,30 +65,30 @@ export function ShowdownSummary({
   const shown = players.filter((p) => !p.folded && p.revealedCards);
   const boards = result?.boards ?? [];
   const boardsToShow = boards.slice(0, Math.max(1, visibleBoards));
-  // Only the most-recently-revealed board is shown at a time (rather than
-  // stacking every board on screen), so a run-it-twice hand stays compact
-  // enough to fit without scrolling; switching boards re-keys the section
-  // below so it cross-fades in instead of popping in abruptly.
-  const currentIndex = boardsToShow.length - 1;
-  const b = boardsToShow[currentIndex];
 
   if (boards.length === 0 && shown.length === 0) return null;
 
   return (
-    <div className="mx-auto flex max-h-full w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-chip-gold/40 bg-felt p-4">
-      <h2 className="mb-2 text-center text-sm font-semibold uppercase tracking-wide text-chip-gold">
+    <div className="mx-auto flex max-h-full w-full max-w-2xl flex-col gap-2 overflow-y-auto rounded-lg border border-chip-gold/40 bg-felt p-4">
+      <h2 className="mb-1 text-center text-sm font-semibold uppercase tracking-wide text-chip-gold">
         {result?.ranItTwice ? "Showdown · Run it twice" : "Showdown"}
       </h2>
 
-      {b && (
-        <div key={`${handId ?? "hand"}-${currentIndex}`} className="animate-fadein rounded-md bg-felt-dark/60 p-3">
+      {/* Board 1 stays put; board 2 (when it's ready) fades in directly
+          beneath it instead of replacing it, so both run-outs are visible
+          and comparable at once. */}
+      {boardsToShow.map((b, i) => (
+        <div
+          key={`${handId ?? "hand"}-${i}`}
+          className={`rounded-md bg-felt-dark/60 p-2.5 ${i === boardsToShow.length - 1 ? "animate-fadein" : ""}`}
+        >
           {result?.ranItTwice && (
-            <p className="mb-2 text-center text-[10px] font-bold uppercase tracking-wide text-chip-gold">
-              Board {currentIndex + 1} of {boards.length}
+            <p className="mb-1.5 text-center text-[10px] font-bold uppercase tracking-wide text-chip-gold">
+              Board {i + 1}
             </p>
           )}
           {b.communityCards.length > 0 && (
-            <BoardCards key={`${handId ?? "hand"}-cards-${currentIndex}`} cards={b.communityCards} />
+            <BoardCards key={`${handId ?? "hand"}-cards-${i}`} cards={b.communityCards} />
           )}
 
           {result?.uncontested ? (
@@ -96,7 +97,7 @@ export function ShowdownSummary({
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <div className="rounded bg-black/30 px-3 py-2">
+              <div className="rounded bg-black/30 px-3 py-1.5">
                 <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-amber-300">
                   🂡 Best poker hand
                 </p>
@@ -108,7 +109,7 @@ export function ShowdownSummary({
                   </p>
                 ))}
               </div>
-              <div className="rounded bg-black/30 px-3 py-2">
+              <div className="rounded bg-black/30 px-3 py-1.5">
                 <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-chip-blue">
                   ◆ Highest pips
                 </p>
@@ -123,15 +124,15 @@ export function ShowdownSummary({
             </div>
           )}
         </div>
-      )}
+      ))}
       {result?.ranItTwice && visibleBoards < boards.length && (
-        <p className="mt-1 text-center text-xs italic text-white/60">Revealing second board…</p>
+        <p className="text-center text-xs italic text-white/60">Revealing second board…</p>
       )}
 
-      {/* Everyone's revealed hole cards + pips */}
+      {/* Everyone's revealed hole cards + pips, below both boards */}
       {shown.length > 0 && (
         <>
-          <div className="my-2 h-px bg-white/10" />
+          <div className="h-px bg-white/10" />
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {shown.map((p) => (
               <div
