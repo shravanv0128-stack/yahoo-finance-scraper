@@ -77,6 +77,8 @@ export default function RoomPage() {
       while (i < a.length && i < b.length && a[i].rank === b[i].rank && a[i].suit === b[i].suit) i++;
       return i;
     })();
+    // BoardCards waits a full stagger interval before flipping even the
+    // first card, so the last card flips at differingCardCount * 2000ms.
     const differingCardCount = (boards[0]?.communityCards.length ?? 5) - flopLen;
     const delay = differingCardCount * 2000 + 1500;
     const timer = setTimeout(() => setRevealStage(2), delay);

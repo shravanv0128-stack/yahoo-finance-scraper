@@ -24,8 +24,11 @@ function BoardCards({ cards }: { cards: CardType[] }) {
 
   useEffect(() => {
     setRevealedCount(0);
+    // Wait a full stagger interval before the *first* card flips too, even
+    // when a board only has one differing card — otherwise it would flip
+    // the instant it mounts, with no suspense at all.
     const timers = cards.map((_, i) =>
-      setTimeout(() => setRevealedCount((c) => Math.max(c, i + 1)), i * BOARD_CARD_STAGGER_MS)
+      setTimeout(() => setRevealedCount((c) => Math.max(c, i + 1)), (i + 1) * BOARD_CARD_STAGGER_MS)
     );
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
