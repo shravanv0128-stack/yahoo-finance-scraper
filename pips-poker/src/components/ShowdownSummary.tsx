@@ -128,7 +128,7 @@ export function ShowdownSummary({
             ))}
           </div>
           {result?.ranItTwice && (
-            <div className="relative ml-6 h-20 w-24">
+            <div className="relative ml-6 h-32 w-24">
               {boards.map((b, i) => {
                 const cards = perBoardDiffering[i];
                 if (cards.length === 0) return null;
@@ -136,10 +136,10 @@ export function ShowdownSummary({
                 return (
                   <div
                     key={`${handId ?? "hand"}-fan-${i}`}
-                    className={`absolute left-0 flex gap-1.5 ${
+                    className={`absolute left-0 top-1/2 flex gap-1.5 ${
                       i === 0
-                        ? "bottom-1/2 origin-bottom-left rotate-[-18deg]"
-                        : "top-1/2 origin-top-left rotate-[18deg]"
+                        ? "-translate-y-12 origin-bottom-left rotate-[-18deg]"
+                        : "translate-y-2 origin-top-left rotate-[18deg]"
                     }`}
                   >
                     {cards.map((c, j) => (
