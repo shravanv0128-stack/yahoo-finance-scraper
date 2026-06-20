@@ -116,23 +116,42 @@ export function ShowdownSummary({
         {result?.ranItTwice ? "Showdown · Run it twice" : "Showdown"}
       </h2>
 
-      {/* Shared flop cards, identical across all boards, shown once face-up
-          with no animation. Each board then splits off below with only its
-          differing turn/river cards animating in, mirroring how a split
-          board looks on a real table. */}
+      {/* Shared flop cards in a row, shown once face-up with no animation;
+          each board's differing turn/river cards fan out at an angle to the
+          right of the flop — board 1 above, board 2 below — like a split
+          board on a real table. */}
       {sharedFlop.length > 0 && (
-        <div className="flex justify-center gap-1">
-          {sharedFlop.map((c, j) => (
-            <Card key={j} card={c} size="sm" />
-          ))}
+        <div className="flex items-center justify-center py-2">
+          <div className="flex gap-1">
+            {sharedFlop.map((c, j) => (
+              <Card key={j} card={c} size="sm" />
+            ))}
+          </div>
+          {boardsToShow.length > 1 && (
+            <div className="relative ml-2 h-12 w-16">
+              {boardsToShow.map((b, i) => {
+                const differingCards = b.communityCards.slice(flopLength);
+                if (differingCards.length === 0) return null;
+                const isFirst = i === 0;
+                return (
+                  <div
+                    key={`${handId ?? "hand"}-fan-${i}`}
+                    className={`absolute left-0 flex gap-0.5 ${
+                      isFirst ? "-top-4 rotate-[-10deg]" : "top-4 rotate-[10deg]"
+                    } ${i === boardsToShow.length - 1 ? "animate-fadein" : ""}`}
+                  >
+                    <BoardCards key={`${handId ?? "hand"}-cards-${i}`} cards={differingCards} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Board 1 stays put; board 2 (when it's ready) fades in directly
-          beneath it instead of replacing it, so both run-outs are visible
-          and comparable at once. */}
       {boardsToShow.map((b, i) => {
-        const differingCards = b.communityCards.slice(flopLength);
+        const isOnlyBoard = boardsToShow.length === 1;
+        const differingCards = isOnlyBoard ? b.communityCards.slice(flopLength) : [];
         return (
           <div
             key={`${handId ?? "hand"}-${i}`}
@@ -143,7 +162,7 @@ export function ShowdownSummary({
                 Board {i + 1}
               </p>
             )}
-            {differingCards.length > 0 && (
+            {isOnlyBoard && differingCards.length > 0 && (
               <div className="mb-2">
                 <BoardCards key={`${handId ?? "hand"}-cards-${i}`} cards={differingCards} />
               </div>
