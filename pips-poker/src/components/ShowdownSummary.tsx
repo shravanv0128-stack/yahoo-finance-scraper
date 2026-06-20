@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { Card as CardType, ShowdownResult } from "@/lib/types";
 import { Card } from "./Card";
 
@@ -6,7 +9,35 @@ import { Card } from "./Card";
 //     half, one section per board so "run it twice" is easy to follow), and
 //  2) the reveal of each player's hole cards + pip total.
 // When a hand was run twice, the parent reveals boards one at a time via
-// `visibleBoards` so the two run-outs are understandable in sequence.
+// `visibleBoards` so the two run-outs are understandable in sequence, and
+// each board's own cards flip face-up one by one (see BoardCards below) for
+// suspense.
+
+const BOARD_CARD_STAGGER_MS = 2000;
+
+// Flips a board's community cards face-up one at a time, ~2s apart. Keyed by
+// the parent on `${handId}-${boardIndex}` so it only replays when that board
+// is genuinely new, not on every polling re-render.
+function BoardCards({ cards }: { cards: CardType[] }) {
+  const [revealedCount, setRevealedCount] = useState(0);
+
+  useEffect(() => {
+    setRevealedCount(0);
+    const timers = cards.map((_, i) =>
+      setTimeout(() => setRevealedCount((c) => Math.max(c, i + 1)), i * BOARD_CARD_STAGGER_MS)
+    );
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards.length]);
+
+  return (
+    <div className="mb-2 flex justify-center gap-1">
+      {cards.map((c, j) => (
+        <Card key={j} card={c} size="sm" faceDown={j >= revealedCount} />
+      ))}
+    </div>
+  );
+}
 
 export interface ShowdownPlayerSummary {
   seat: number;
@@ -23,10 +54,12 @@ export function ShowdownSummary({
   result,
   players,
   visibleBoards,
+  handId,
 }: {
   result: ShowdownResult | null;
   players: ShowdownPlayerSummary[];
   visibleBoards: number;
+  handId?: string | number | null;
 }) {
   const shown = players.filter((p) => !p.folded && p.revealedCards);
   const boards = result?.boards ?? [];
@@ -50,11 +83,7 @@ export function ShowdownSummary({
               </p>
             )}
             {b.communityCards.length > 0 && (
-              <div className="mb-2 flex justify-center gap-1">
-                {b.communityCards.map((c, j) => (
-                  <Card key={j} card={c} size="sm" />
-                ))}
-              </div>
+              <BoardCards key={`${handId ?? "hand"}-${i}`} cards={b.communityCards} />
             )}
 
             {result?.uncontested ? (

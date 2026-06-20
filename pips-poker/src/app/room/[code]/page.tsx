@@ -64,7 +64,12 @@ export default function RoomPage() {
       return;
     }
     setRevealStage(1);
-    const timer = setTimeout(() => setRevealStage(2), 3000);
+    // Wait for board 1's cards to finish flipping one-by-one (see
+    // BOARD_CARD_STAGGER_MS in ShowdownSummary) before revealing board 2, plus
+    // a short pause so the result is readable before the second run-out starts.
+    const firstBoardCardCount = gs.showdown_result?.boards?.[0]?.communityCards.length ?? 5;
+    const delay = firstBoardCardCount * 2000 + 1500;
+    const timer = setTimeout(() => setRevealStage(2), delay);
     return () => clearTimeout(timer);
   }, [data?.gameState?.phase, data?.gameState?.hand_id, data?.gameState?.showdown_result?.ranItTwice]);
 
@@ -516,6 +521,7 @@ export default function RoomPage() {
       {gameState?.phase === "hand_complete" && (
         <ShowdownSummary
           result={gameState.showdown_result}
+          handId={gameState.hand_id}
           visibleBoards={revealStage}
           players={handPlayers.map((hp) => ({
             seat: hp.seat,
