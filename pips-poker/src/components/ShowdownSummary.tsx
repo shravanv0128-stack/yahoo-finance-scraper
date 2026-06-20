@@ -64,76 +64,79 @@ export function ShowdownSummary({
   const shown = players.filter((p) => !p.folded && p.revealedCards);
   const boards = result?.boards ?? [];
   const boardsToShow = boards.slice(0, Math.max(1, visibleBoards));
+  // Only the most-recently-revealed board is shown at a time (rather than
+  // stacking every board on screen), so a run-it-twice hand stays compact
+  // enough to fit without scrolling; switching boards re-keys the section
+  // below so it cross-fades in instead of popping in abruptly.
+  const currentIndex = boardsToShow.length - 1;
+  const b = boardsToShow[currentIndex];
 
   if (boards.length === 0 && shown.length === 0) return null;
 
   return (
-    <div className="mx-auto mt-4 w-full max-w-2xl rounded-lg border border-chip-gold/40 bg-felt p-4">
-      <h2 className="mb-3 text-center text-sm font-semibold uppercase tracking-wide text-chip-gold">
+    <div className="mx-auto flex max-h-full w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-chip-gold/40 bg-felt p-4">
+      <h2 className="mb-2 text-center text-sm font-semibold uppercase tracking-wide text-chip-gold">
         {result?.ranItTwice ? "Showdown · Run it twice" : "Showdown"}
       </h2>
 
-      {/* Per-board "who won which pot" breakdown */}
-      <div className="flex flex-col gap-3">
-        {boardsToShow.map((b, i) => (
-          <div key={i} className="rounded-md bg-felt-dark/60 p-3">
-            {b.label && (
-              <p className="mb-2 text-center text-xs font-bold uppercase tracking-wide text-chip-gold">
-                {b.label}
-              </p>
-            )}
-            {b.communityCards.length > 0 && (
-              <BoardCards key={`${handId ?? "hand"}-${i}`} cards={b.communityCards} />
-            )}
+      {b && (
+        <div key={`${handId ?? "hand"}-${currentIndex}`} className="animate-fadein rounded-md bg-felt-dark/60 p-3">
+          {result?.ranItTwice && (
+            <p className="mb-2 text-center text-[10px] font-bold uppercase tracking-wide text-chip-gold">
+              Board {currentIndex + 1} of {boards.length}
+            </p>
+          )}
+          {b.communityCards.length > 0 && (
+            <BoardCards key={`${handId ?? "hand"}-cards-${currentIndex}`} cards={b.communityCards} />
+          )}
 
-            {result?.uncontested ? (
-              <p className="text-center text-sm font-semibold text-emerald-400">
-                {b.pokerWinners[0]?.displayName} wins ${b.pokerWinners[0]?.amount} (everyone else folded)
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div className="rounded bg-black/30 px-3 py-2">
-                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-amber-300">
-                    🂡 Best poker hand
+          {result?.uncontested ? (
+            <p className="text-center text-sm font-semibold text-emerald-400">
+              {b.pokerWinners[0]?.displayName} wins ${b.pokerWinners[0]?.amount} (everyone else folded)
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="rounded bg-black/30 px-3 py-2">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-amber-300">
+                  🂡 Best poker hand
+                </p>
+                {b.pokerWinners.map((w, j) => (
+                  <p key={j} className="text-xs text-white">
+                    <span className="font-semibold">{w.displayName}</span>{" "}
+                    <span className="text-emerald-400">+${w.amount}</span>
+                    <span className="text-white/50"> — {w.handLabel}</span>
                   </p>
-                  {b.pokerWinners.map((w, j) => (
-                    <p key={j} className="text-xs text-white">
-                      <span className="font-semibold">{w.displayName}</span>{" "}
-                      <span className="text-emerald-400">+${w.amount}</span>
-                      <span className="text-felt-light"> — {w.handLabel}</span>
-                    </p>
-                  ))}
-                </div>
-                <div className="rounded bg-black/30 px-3 py-2">
-                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-chip-blue">
-                    ◆ Highest pips
-                  </p>
-                  {b.pipWinners.map((w, j) => (
-                    <p key={j} className="text-xs text-white">
-                      <span className="font-semibold">{w.displayName}</span>{" "}
-                      <span className="text-emerald-400">+${w.amount}</span>
-                      <span className="text-felt-light"> — {w.pipTotal} pips</span>
-                    </p>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
-          </div>
-        ))}
-        {result?.ranItTwice && visibleBoards < boards.length && (
-          <p className="text-center text-xs italic text-felt-light/70">Revealing second board…</p>
-        )}
-      </div>
+              <div className="rounded bg-black/30 px-3 py-2">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-chip-blue">
+                  ◆ Highest pips
+                </p>
+                {b.pipWinners.map((w, j) => (
+                  <p key={j} className="text-xs text-white">
+                    <span className="font-semibold">{w.displayName}</span>{" "}
+                    <span className="text-emerald-400">+${w.amount}</span>
+                    <span className="text-white/50"> — {w.pipTotal} pips</span>
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {result?.ranItTwice && visibleBoards < boards.length && (
+        <p className="mt-1 text-center text-xs italic text-white/60">Revealing second board…</p>
+      )}
 
       {/* Everyone's revealed hole cards + pips */}
       {shown.length > 0 && (
         <>
-          <div className="my-3 h-px bg-white/10" />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="my-2 h-px bg-white/10" />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {shown.map((p) => (
               <div
                 key={p.seat}
-                className={`flex items-center justify-between rounded-md px-3 py-2 ${
+                className={`flex items-center justify-between rounded-md px-3 py-1.5 ${
                   p.amountWon > 0 ? "bg-emerald-900/40 ring-1 ring-chip-gold/60" : "bg-felt-dark/60"
                 }`}
               >

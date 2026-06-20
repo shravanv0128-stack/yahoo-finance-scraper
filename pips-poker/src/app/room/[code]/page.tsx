@@ -12,13 +12,12 @@ import { useRoomRealtime } from "@/hooks/useRoomRealtime";
 import { Table, type TableSeatData } from "@/components/Table";
 import { BettingControls } from "@/components/BettingControls";
 import { DrawSwapControls } from "@/components/DrawSwapControls";
-import { ShowdownSummary } from "@/components/ShowdownSummary";
+import { ShowdownSummary, type ShowdownPlayerSummary } from "@/components/ShowdownSummary";
 import { LedgerPanel } from "@/components/LedgerPanel";
 import { RunItTwicePrompt } from "@/components/RunItTwicePrompt";
 import { ShowMuckPrompt } from "@/components/ShowMuckPrompt";
-import { CommunityBoard } from "@/components/CommunityBoard";
 import { ChatPanel } from "@/components/ChatPanel";
-import type { BettingAction, ShowDecision } from "@/lib/types";
+import type { BettingAction, ShowDecision, ShowdownResult } from "@/lib/types";
 
 const BETTING_PHASES = new Set(["flop_betting", "turn_betting", "river_betting"]);
 
@@ -72,6 +71,43 @@ export default function RoomPage() {
     const timer = setTimeout(() => setRevealStage(2), delay);
     return () => clearTimeout(timer);
   }, [data?.gameState?.phase, data?.gameState?.hand_id, data?.gameState?.showdown_result?.ranItTwice]);
+
+  // The showdown summary is shown as an overlay on top of the table rather
+  // than pushed into the page flow, so it never forces a scroll. It's kept
+  // mounted for a moment after the hand moves on (next hand auto-deals) so
+  // it can fade out smoothly instead of disappearing the instant the phase
+  // flips - the snapshot freezes its content while that fade plays out.
+  const [showdownSnapshot, setShowdownSnapshot] = useState<{
+    result: ShowdownResult | null;
+    handId: string | number | null;
+    players: ShowdownPlayerSummary[];
+  } | null>(null);
+  const [showdownVisible, setShowdownVisible] = useState(false);
+  useEffect(() => {
+    const gs = data?.gameState;
+    if (gs?.phase === "hand_complete") {
+      setShowdownSnapshot({
+        result: gs.showdown_result,
+        handId: gs.hand_id,
+        players: handPlayers.map((hp) => ({
+          seat: hp.seat,
+          displayName: hp.display_name,
+          chipStack: hp.chip_stack,
+          revealedCards: hp.revealed_cards,
+          revealedPipTotal: hp.revealed_pip_total,
+          folded: hp.status === "folded",
+          amountWon: hp.amount_won,
+          mucked: hp.mucked,
+        })),
+      });
+      setShowdownVisible(true);
+    } else {
+      setShowdownVisible(false);
+      const t = setTimeout(() => setShowdownSnapshot(null), 350);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.gameState?.phase, data?.gameState?.hand_id]);
 
   async function authedFetch(url: string, body: unknown) {
     const token = session?.access_token;
@@ -456,7 +492,7 @@ export default function RoomPage() {
         </div>
       )}
 
-      <div className="flex flex-1 items-center justify-center px-4 py-6 pb-24">
+      <div className="relative flex flex-1 items-center justify-center px-4 py-6 pb-24">
         <Table
           seats={seats}
           dealerSeat={gameState?.dealer_seat ?? 0}
@@ -468,20 +504,33 @@ export default function RoomPage() {
           actDeadline={gameState?.act_deadline ?? null}
           actTimeoutSeconds={room.act_timeout_seconds ?? 60}
         />
+
+        {/* Showdown summary as an overlay on top of the table, never pushing
+            the page into a scroll. It fades in on arrival and fades out
+            smoothly (rather than vanishing abruptly) once the next hand
+            starts dealing. */}
+        {showdownSnapshot && (
+          <div
+            className={`absolute inset-0 z-10 flex items-center justify-center bg-black/75 p-4 transition-opacity duration-300 ${
+              showdownVisible ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          >
+            <ShowdownSummary
+              result={showdownSnapshot.result}
+              handId={showdownSnapshot.handId}
+              visibleBoards={revealStage}
+              players={showdownSnapshot.players}
+            />
+          </div>
+        )}
       </div>
 
-      {gameState?.community_cards_2 && (
-        <div className="mx-auto -mt-2 mb-2 flex flex-col items-center gap-1">
-          <p className="text-[10px] uppercase tracking-wide text-chip-gold">Board 1</p>
-          {revealStage >= 2 ? (
-            <>
-              <p className="mt-2 text-[10px] uppercase tracking-wide text-chip-gold">Board 2 (run it twice)</p>
-              <CommunityBoard cards={gameState.community_cards_2} />
-            </>
-          ) : (
-            <p className="mt-1 text-[10px] italic text-felt-light/70">Revealing second board…</p>
-          )}
-        </div>
+      {gameState?.phase === "hand_complete" && (
+        <p className="mx-auto -mt-2 mb-2 text-center text-xs text-white/50">
+          {gameState.showdown_result?.ranItTwice
+            ? "Next hand starts automatically in a bit, once both boards have been shown..."
+            : "Next hand starts automatically in a few seconds..."}
+        </p>
       )}
 
       {amSeated && (
@@ -518,31 +567,6 @@ export default function RoomPage() {
         </div>
       )}
 
-      {gameState?.phase === "hand_complete" && (
-        <ShowdownSummary
-          result={gameState.showdown_result}
-          handId={gameState.hand_id}
-          visibleBoards={revealStage}
-          players={handPlayers.map((hp) => ({
-            seat: hp.seat,
-            displayName: hp.display_name,
-            chipStack: hp.chip_stack,
-            revealedCards: hp.revealed_cards,
-            revealedPipTotal: hp.revealed_pip_total,
-            folded: hp.status === "folded",
-            amountWon: hp.amount_won,
-            mucked: hp.mucked,
-          }))}
-        />
-      )}
-
-      {gameState?.phase === "hand_complete" && (
-        <p className="mx-auto mt-2 text-center text-xs text-white/50">
-          {gameState.showdown_result?.ranItTwice
-            ? "Next hand starts automatically in a bit, once both boards have been shown..."
-            : "Next hand starts automatically in a few seconds..."}
-        </p>
-      )}
     </main>
   );
 }

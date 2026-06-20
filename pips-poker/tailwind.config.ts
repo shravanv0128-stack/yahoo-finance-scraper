@@ -29,6 +29,15 @@ const config: Config = {
         table: "inset 0 0 120px rgba(0,0,0,0.75), 0 0 60px rgba(57,255,140,0.12)",
         neon: "0 0 14px rgba(57,255,140,0.65), 0 0 4px rgba(57,255,140,0.9)",
       },
+      keyframes: {
+        fadein: {
+          "0%": { opacity: "0", transform: "translateY(4px) scale(0.98)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+      },
+      animation: {
+        fadein: "fadein 0.35s ease-out",
+      },
     },
   },
   plugins: [],
