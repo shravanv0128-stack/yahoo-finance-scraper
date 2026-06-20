@@ -111,17 +111,20 @@ export function ShowdownSummary({
   if (boards.length === 0 && shown.length === 0) return null;
 
   return (
-    <div className="mx-auto flex max-h-full w-full max-w-3xl flex-col gap-2 overflow-y-auto rounded-lg border border-chip-gold/40 bg-felt p-5">
-      <h2 className="mb-1 text-center text-sm font-semibold uppercase tracking-wide text-chip-gold">
+    <div className="mx-auto flex max-h-full w-full max-w-3xl flex-col gap-2 overflow-y-auto rounded-lg border border-chip-gold/40 bg-felt p-6">
+      <h2 className="mb-2 text-center text-sm font-semibold uppercase tracking-wide text-chip-gold">
         {result?.ranItTwice ? "Showdown · Run it twice" : "Showdown"}
       </h2>
 
       {/* Shared flop cards in a row, shown once face-up with no animation;
           each board's differing turn/river cards fan out at an angle to the
           right of the flop — board 1 above, board 2 below — like a split
-          board on a real table. */}
+          board on a real table. Generous top/bottom padding here because the
+          rotated fans visually extend past their layout box (CSS transforms
+          don't grow the box reflowed by the flex container), so without it
+          they'd bleed into the title above or "Board 1" text below. */}
       {sharedFlop.length > 0 && (
-        <div className="flex items-center justify-center py-3">
+        <div className="flex items-center justify-center py-8">
           <div className="flex gap-1.5">
             {sharedFlop.map((c, j) => (
               <Card key={j} card={c} size="md" />

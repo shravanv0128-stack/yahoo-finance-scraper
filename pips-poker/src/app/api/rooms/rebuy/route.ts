@@ -13,9 +13,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = (await req.json()) as { roomId?: string };
+    const body = (await req.json()) as { roomId?: string; amount?: number };
     if (!body.roomId) {
       return NextResponse.json({ error: "roomId is required" }, { status: 400 });
+    }
+    if (body.amount !== undefined && (!Number.isFinite(body.amount) || body.amount <= 0)) {
+      return NextResponse.json({ error: "amount must be a positive number" }, { status: 400 });
     }
 
     const supabase = getServiceRoleClient();
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "You still have chips - no rebuy needed" }, { status: 409 });
     }
 
-    const rebuyAmount = room.starting_stack ?? 1000;
+    const rebuyAmount = body.amount ?? room.starting_stack ?? 1000;
     const { data: updated, error: updateError } = await supabase
       .from("players")
       .update({

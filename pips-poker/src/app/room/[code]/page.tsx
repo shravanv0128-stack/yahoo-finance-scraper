@@ -27,6 +27,7 @@ export default function RoomPage() {
   const { data, error, loading, refresh } = useRoomRealtime(roomId);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [rebuyAmount, setRebuyAmount] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [session, setSession] = useState<Session | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
@@ -200,11 +201,11 @@ export default function RoomPage() {
     }
   }
 
-  async function handleRebuy() {
+  async function handleRebuy(amount: number) {
     setActionError(null);
     setBusy(true);
     try {
-      await authedFetch(`/api/rooms/rebuy`, { roomId });
+      await authedFetch(`/api/rooms/rebuy`, { roomId, amount });
       await refresh();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to buy back in");
@@ -436,13 +437,30 @@ export default function RoomPage() {
           <p className="text-center text-xs text-white/70">
             You're out of chips. Buy back in to get dealt into the next hand.
           </p>
-          <button
-            onClick={handleRebuy}
-            disabled={busy}
-            className="rounded bg-chip-gold px-4 py-2 text-xs font-semibold text-felt-dark disabled:opacity-40"
-          >
-            Buy back in (${room.starting_stack ?? 1000})
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-white/60">$</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={rebuyAmount}
+              onChange={(e) => setRebuyAmount(e.target.value)}
+              placeholder={String(room.starting_stack ?? 1000)}
+              disabled={busy}
+              className="w-24 rounded bg-felt-dark px-2 py-1 text-xs text-white outline-none ring-1 ring-white/20 focus:ring-chip-gold disabled:opacity-40"
+            />
+            <button
+              onClick={() => {
+                const parsed = Number(rebuyAmount);
+                const amount = rebuyAmount.trim() && Number.isFinite(parsed) && parsed > 0 ? parsed : room.starting_stack ?? 1000;
+                handleRebuy(amount);
+              }}
+              disabled={busy}
+              className="rounded bg-chip-gold px-4 py-2 text-xs font-semibold text-felt-dark disabled:opacity-40"
+            >
+              Buy back in
+            </button>
+          </div>
         </div>
       )}
 
@@ -494,16 +512,19 @@ export default function RoomPage() {
             smoothly (rather than vanishing abruptly) once the next hand
             starts dealing. */}
         {showdownSnapshot && (
-          <div
-            className={`absolute inset-0 z-10 flex items-center justify-center bg-black/75 p-4 transition-opacity duration-300 ${
-              showdownVisible ? "opacity-100" : "pointer-events-none opacity-0"
-            }`}
-          >
-            <ShowdownSummary
-              result={showdownSnapshot.result}
-              handId={showdownSnapshot.handId}
-              players={showdownSnapshot.players}
-            />
+          // The backdrop is fully opaque from the very first frame (no fade,
+          // no transparency) so the real table cards underneath - which the
+          // server has already dealt face-up by the time hand_complete fires
+          // - can never be glimpsed through it while only the inner panel
+          // fades in/out.
+          <div className={`absolute inset-0 z-10 flex items-center justify-center bg-black p-4 ${showdownVisible ? "" : "pointer-events-none"}`}>
+            <div className={`transition-opacity duration-300 ${showdownVisible ? "opacity-100" : "opacity-0"}`}>
+              <ShowdownSummary
+                result={showdownSnapshot.result}
+                handId={showdownSnapshot.handId}
+                players={showdownSnapshot.players}
+              />
+            </div>
           </div>
         )}
 
