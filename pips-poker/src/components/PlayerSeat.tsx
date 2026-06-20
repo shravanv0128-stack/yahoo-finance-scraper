@@ -78,7 +78,7 @@ export function PlayerSeat({
             key={i}
             card={cardsToShow?.[i] ?? undefined}
             faceDown={!showFaceUp || !cardsToShow?.[i]}
-            size={isMe ? "md" : "sm"}
+            size={isMe && isActingSeat ? "lg" : isMe ? "md" : "sm"}
             highlight={isActingSeat}
           />
         ))}
@@ -105,7 +105,9 @@ export function PlayerSeat({
       )}
 
       <div
-        className={`relative flex h-16 w-16 flex-col items-center justify-center rounded-full border bg-gradient-to-b from-zinc-800/90 via-black/90 to-black text-center backdrop-blur-sm transition-shadow ${
+        className={`relative flex flex-col items-center justify-center rounded-full border bg-gradient-to-b from-zinc-800/90 via-black/90 to-black text-center backdrop-blur-sm transition-all ${
+          isMe && isActingSeat ? "h-20 w-20" : "h-16 w-16"
+        } ${
           isActingSeat
             ? "border-amber-300/80 shadow-[0_0_10px_2px_rgba(251,191,36,0.4)]"
             : "border-neon/50 shadow-neon"
