@@ -16,9 +16,9 @@ import { Card } from "./Card";
 
 const BOARD_CARD_STAGGER_MS = 2000;
 
-// Flips a board's community cards face-up one at a time, ~2s apart. Keyed by
-// the parent on `${handId}-${boardIndex}` so it only replays when that board
-// is genuinely new, not on every polling re-render.
+// Flips a board's *differing* cards (turn/river) face-up one at a time, ~2s
+// apart. Keyed by the parent on `${handId}-${boardIndex}` so it only replays
+// when that board is genuinely new, not on every polling re-render.
 function BoardCards({ cards }: { cards: CardType[] }) {
   const [revealedCount, setRevealedCount] = useState(0);
 
@@ -32,12 +32,52 @@ function BoardCards({ cards }: { cards: CardType[] }) {
   }, [cards.length]);
 
   return (
-    <div className="mb-2 flex justify-center gap-1">
+    <div className="flex justify-center gap-1">
       {cards.map((c, j) => (
         <Card key={j} card={c} size="sm" faceDown={j >= revealedCount} />
       ))}
     </div>
   );
+}
+
+// How many leading community cards are identical across every board being
+// shown (the shared flop in a run-it-twice hand). Those render once, face-up,
+// with no animation; only the cards after this point differ between boards
+// and get the flip reveal.
+function sharedPrefixLength(boards: { communityCards: CardType[] }[]): number {
+  if (boards.length === 0) return 0;
+  const first = boards[0].communityCards;
+  let n = first.length;
+  for (const b of boards.slice(1)) {
+    let i = 0;
+    while (i < n && i < b.communityCards.length && b.communityCards[i].rank === first[i].rank && b.communityCards[i].suit === first[i].suit) {
+      i++;
+    }
+    n = Math.min(n, i);
+  }
+  return n;
+}
+
+// Groups winners that have the same label/total into one line, e.g. two
+// players tied with "Straight, Ace high" both get listed together.
+function groupWinners<T extends { displayName: string }>(winners: T[], keyOf: (w: T) => string): { displayNames: string[]; key: string }[] {
+  const groups = new Map<string, string[]>();
+  const order: string[] = [];
+  for (const w of winners) {
+    const key = keyOf(w);
+    if (!groups.has(key)) {
+      groups.set(key, []);
+      order.push(key);
+    }
+    groups.get(key)!.push(w.displayName);
+  }
+  return order.map((key) => ({ key, displayNames: groups.get(key)! }));
+}
+
+function joinNames(names: string[]): string {
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} & ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} & ${names[names.length - 1]}`;
 }
 
 export interface ShowdownPlayerSummary {
@@ -65,6 +105,8 @@ export function ShowdownSummary({
   const shown = players.filter((p) => !p.folded && p.revealedCards);
   const boards = result?.boards ?? [];
   const boardsToShow = boards.slice(0, Math.max(1, visibleBoards));
+  const flopLength = sharedPrefixLength(boardsToShow);
+  const sharedFlop = boardsToShow[0]?.communityCards.slice(0, flopLength) ?? [];
 
   if (boards.length === 0 && shown.length === 0) return null;
 
@@ -74,57 +116,72 @@ export function ShowdownSummary({
         {result?.ranItTwice ? "Showdown · Run it twice" : "Showdown"}
       </h2>
 
+      {/* Shared flop cards, identical across all boards, shown once face-up
+          with no animation. Each board then splits off below with only its
+          differing turn/river cards animating in, mirroring how a split
+          board looks on a real table. */}
+      {sharedFlop.length > 0 && (
+        <div className="flex justify-center gap-1">
+          {sharedFlop.map((c, j) => (
+            <Card key={j} card={c} size="sm" />
+          ))}
+        </div>
+      )}
+
       {/* Board 1 stays put; board 2 (when it's ready) fades in directly
           beneath it instead of replacing it, so both run-outs are visible
           and comparable at once. */}
-      {boardsToShow.map((b, i) => (
-        <div
-          key={`${handId ?? "hand"}-${i}`}
-          className={`rounded-md bg-felt-dark/60 p-2.5 ${i === boardsToShow.length - 1 ? "animate-fadein" : ""}`}
-        >
-          {result?.ranItTwice && (
-            <p className="mb-1.5 text-center text-[10px] font-bold uppercase tracking-wide text-chip-gold">
-              Board {i + 1}
-            </p>
-          )}
-          {b.communityCards.length > 0 && (
-            <BoardCards key={`${handId ?? "hand"}-cards-${i}`} cards={b.communityCards} />
-          )}
+      {boardsToShow.map((b, i) => {
+        const differingCards = b.communityCards.slice(flopLength);
+        return (
+          <div
+            key={`${handId ?? "hand"}-${i}`}
+            className={`rounded-md bg-felt-dark/60 p-2.5 ${i === boardsToShow.length - 1 ? "animate-fadein" : ""}`}
+          >
+            {result?.ranItTwice && (
+              <p className="mb-1.5 text-center text-[10px] font-bold uppercase tracking-wide text-chip-gold">
+                Board {i + 1}
+              </p>
+            )}
+            {differingCards.length > 0 && (
+              <div className="mb-2">
+                <BoardCards key={`${handId ?? "hand"}-cards-${i}`} cards={differingCards} />
+              </div>
+            )}
 
-          {result?.uncontested ? (
-            <p className="text-center text-sm font-semibold text-emerald-400">
-              {b.pokerWinners[0]?.displayName} wins ${b.pokerWinners[0]?.amount} (everyone else folded)
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <div className="rounded bg-black/30 px-3 py-1.5">
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-amber-300">
-                  🂡 Best poker hand
-                </p>
-                {b.pokerWinners.map((w, j) => (
-                  <p key={j} className="text-xs text-white">
-                    <span className="font-semibold">{w.displayName}</span>{" "}
-                    <span className="text-emerald-400">+${w.amount}</span>
-                    <span className="text-white/50"> — {w.handLabel}</span>
+            {result?.uncontested ? (
+              <p className="text-center text-sm font-semibold text-emerald-400">
+                {b.pokerWinners[0]?.displayName} wins (everyone else folded)
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="rounded bg-black/30 px-3 py-1.5">
+                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-amber-300">
+                    🂡 Best poker hand
                   </p>
-                ))}
-              </div>
-              <div className="rounded bg-black/30 px-3 py-1.5">
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-chip-blue">
-                  ◆ Highest pips
-                </p>
-                {b.pipWinners.map((w, j) => (
-                  <p key={j} className="text-xs text-white">
-                    <span className="font-semibold">{w.displayName}</span>{" "}
-                    <span className="text-emerald-400">+${w.amount}</span>
-                    <span className="text-white/50"> — {w.pipTotal} pips</span>
+                  {groupWinners(b.pokerWinners, (w) => w.handLabel).map((g, j) => (
+                    <p key={j} className="text-xs text-white">
+                      <span className="font-semibold">{joinNames(g.displayNames)}</span>
+                      <span className="text-white/50"> — {g.key}</span>
+                    </p>
+                  ))}
+                </div>
+                <div className="rounded bg-black/30 px-3 py-1.5">
+                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-chip-blue">
+                    ◆ Highest pips
                   </p>
-                ))}
+                  {groupWinners(b.pipWinners, (w) => `${w.pipTotal} pips`).map((g, j) => (
+                    <p key={j} className="text-xs text-white">
+                      <span className="font-semibold">{joinNames(g.displayNames)}</span>
+                      <span className="text-white/50"> — {g.key}</span>
+                    </p>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        );
+      })}
       {result?.ranItTwice && visibleBoards < boards.length && (
         <p className="text-center text-xs italic text-white/60">Revealing second board…</p>
       )}
