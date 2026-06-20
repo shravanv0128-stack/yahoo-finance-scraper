@@ -52,38 +52,9 @@ export default function RoomPage() {
 
   // The next hand is dealt automatically by the server a few seconds after a
   // hand completes (see the room state GET route), so no client timer is
-  // needed for that. What we DO stage on the client is the run-it-twice
-  // reveal: show board 1 and its result first, then board 2 a few seconds
-  // later, so two run-outs are easy to follow instead of appearing at once.
-  const [revealStage, setRevealStage] = useState(1);
-  useEffect(() => {
-    const gs = data?.gameState;
-    if (gs?.phase !== "hand_complete" || !gs.showdown_result?.ranItTwice) {
-      setRevealStage(1);
-      return;
-    }
-    setRevealStage(1);
-    // Wait for board 1's cards to finish flipping one-by-one (see
-    // BOARD_CARD_STAGGER_MS in ShowdownSummary) before revealing board 2, plus
-    // a short pause so the result is readable before the second run-out starts.
-    // Only the cards that differ from board 1 (the turn/river) animate now
-    // that the shared flop renders once up front, so base the delay on those.
-    const boards = gs.showdown_result?.boards ?? [];
-    const flopLen = (() => {
-      if (boards.length < 2) return 3;
-      const a = boards[0].communityCards;
-      const b = boards[1].communityCards;
-      let i = 0;
-      while (i < a.length && i < b.length && a[i].rank === b[i].rank && a[i].suit === b[i].suit) i++;
-      return i;
-    })();
-    // BoardCards waits a full stagger interval before flipping even the
-    // first card, so the last card flips at differingCardCount * 2000ms.
-    const differingCardCount = (boards[0]?.communityCards.length ?? 5) - flopLen;
-    const delay = differingCardCount * 2000 + 1500;
-    const timer = setTimeout(() => setRevealStage(2), delay);
-    return () => clearTimeout(timer);
-  }, [data?.gameState?.phase, data?.gameState?.hand_id, data?.gameState?.showdown_result?.ranItTwice]);
+  // needed for that. The run-it-twice reveal (board 1's cards flipping
+  // before board 2's) is staged entirely inside ShowdownSummary, on a single
+  // combined timeline, so the two boards can never race or interleave.
 
   // The showdown summary is shown as an overlay on top of the table rather
   // than pushed into the page flow, so it never forces a scroll. It's kept
@@ -531,7 +502,6 @@ export default function RoomPage() {
             <ShowdownSummary
               result={showdownSnapshot.result}
               handId={showdownSnapshot.handId}
-              visibleBoards={revealStage}
               players={showdownSnapshot.players}
             />
           </div>
