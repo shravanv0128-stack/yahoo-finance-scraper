@@ -506,6 +506,20 @@ export default function RoomPage() {
             />
           </div>
         )}
+
+        {/* Draw/swap decision as a centered popup too, so the flop, your
+            cards, and the stand-pat/swap buttons are all visible together
+            with no scrolling. */}
+        {isSwapPhase && myHandPlayer && myHandPlayer.status === "active" && !myHandPlayer.has_swapped && myHoleCards && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/75 p-4">
+            <DrawSwapControls
+              holeCards={myHoleCards}
+              communityCards={gameState?.community_cards ?? []}
+              disabled={busy}
+              onSwap={handleSwap}
+            />
+          </div>
+        )}
       </div>
 
       {gameState?.phase === "hand_complete" && (
@@ -529,10 +543,6 @@ export default function RoomPage() {
                 disabled={busy}
                 onAction={handleAction}
               />
-            )}
-
-            {isSwapPhase && myHandPlayer && myHandPlayer.status === "active" && !myHandPlayer.has_swapped && myHoleCards && (
-              <DrawSwapControls holeCards={myHoleCards} disabled={busy} onSwap={handleSwap} />
             )}
 
             {isRunTwicePending && amInLiveHand && myHandPlayer && (
