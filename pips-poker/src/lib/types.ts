@@ -19,7 +19,6 @@ export type GamePhase =
   | "waiting_room"
   | "ante"
   | "deal_hole_cards"
-  | "preflop_betting" // Hold'em only; Pips never enters this phase
   | "flop"
   | "flop_betting"
   | "draw_swap"
@@ -30,9 +29,6 @@ export type GamePhase =
   | "all_in_runout"
   | "showdown"
   | "hand_complete";
-
-export type GameMode = "pips" | "holdem";
-export type RotationMode = "dealer_choice" | "every_x";
 
 export type PlayerStatus = "active" | "folded" | "all_in" | "sitting_out";
 
@@ -108,8 +104,6 @@ export interface GameStateRow {
   community_cards_2: Card[] | null; // second board, only populated when run-it-twice was chosen
   last_aggressor_seat: number | null; // last bettor/raiser in the current betting round, reset each new round
   awaiting_show_decision: boolean; // true during the "showdown" phase while contenders take turns choosing show/muck
-  game_mode: GameMode; // resolved mode for the in-progress hand
-  pending_game_mode: GameMode | null; // dealer's choice for the NEXT hand (dealer_choice rotation only); sticky
   updated_at: string;
 }
 
@@ -119,8 +113,6 @@ export interface HandRow {
   hand_number: number;
   phase: GamePhase;
   pot: number;
-  game_mode: GameMode;
-  dealer_seat: number | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -132,10 +124,6 @@ export interface RoomRow {
   created_by: string;
   ante_amount: number;
   small_bet: number;
-  small_blind: number;
-  big_blind: number;
-  rotation_mode: RotationMode;
-  pips_interval: number;
   created_at: string;
 }
 
@@ -180,7 +168,6 @@ export interface ShowdownResult {
   ranItTwice: boolean;
   uncontested: boolean; // true when everyone else folded (no cards need showing)
   boards: ShowdownBoardResult[];
-  gameMode?: GameMode; // when "holdem", clients should hide the pips column entirely
 }
 
 export interface ShowdownPlayerResult {
@@ -188,7 +175,7 @@ export interface ShowdownPlayerResult {
   seat: number;
   display_name: string;
   bestHand: HandRankResult;
-  pipResult: PipResult | null; // null for Hold'em hands, which have no pip concept
+  pipResult: PipResult;
   pokerWinShare: number; // dollars won from the poker half
   pipWinShare: number; // dollars won from the pip half
   totalWin: number;

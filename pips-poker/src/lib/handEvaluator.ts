@@ -121,21 +121,6 @@ function evaluateFiveCardHand(cards: Card[]): { category: HandRankCategory; tieb
 }
 
 /**
- * Exported, generic wrapper around evaluateFiveCardHand for use by other
- * game modes (Hold'em - see holdemEvaluator.ts) that need to score a single
- * 5-card combo without Pips' 2-hole+3-board enumeration constraint. Returns
- * the categoryRank too so callers can compare without re-deriving it.
- */
-export function evaluateFiveCardHandForHoldem(cards: Card[]): {
-  category: HandRankCategory;
-  categoryRank: number;
-  tiebreakers: number[];
-} {
-  const { category, tiebreakers } = evaluateFiveCardHand(cards);
-  return { category, categoryRank: CATEGORY_RANK[category], tiebreakers };
-}
-
-/**
  * Find the best 5-card poker hand for a player given their 3 hole cards and
  * the 5 community cards, enforcing the exact-2-hole + exact-3-board rule.
  */

@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, getSession } from "@/lib/supabaseClient";
-import type { Card, GamePhase, GameMode, RotationMode, ShowdownResult } from "@/lib/types";
+import type { Card, GamePhase, ShowdownResult } from "@/lib/types";
 
 export interface RoomPlayer {
   id: string;
@@ -61,21 +61,6 @@ export interface RoomGameState {
   showdown_result: ShowdownResult | null;
   pots: { amount: number; label: string }[];
   hand_id: string | null;
-  game_mode: GameMode;
-  pending_game_mode: GameMode | null;
-}
-
-export interface RoomHandHistoryEntry {
-  handId: string;
-  handNumber: number;
-  gameMode: GameMode;
-  dealerSeat: number | null;
-  pot: number;
-  completedAt: string | null;
-  winners: { displayName: string; seat: number; amountWon: number }[];
-  players: { displayName: string; seat: number; netChange: number }[];
-  cardsSwappedCount: number | null;
-  pipWinner: { displayName: string; pipTotal: number } | null;
 }
 
 export interface RoomChatMessage {
@@ -98,10 +83,6 @@ export interface RoomStateResponse {
     starting_stack?: number;
     act_timeout_seconds?: number;
     max_players?: number;
-    small_blind?: number;
-    big_blind?: number;
-    rotation_mode?: RotationMode;
-    pips_interval?: number;
   };
   players: RoomPlayer[];
   gameState: RoomGameState | null;
@@ -109,7 +90,6 @@ export interface RoomStateResponse {
   myHoleCards: Card[] | null;
   myUserId: string;
   chatMessages: RoomChatMessage[];
-  handHistory: RoomHandHistoryEntry[];
 }
 
 const POLL_MS = 2500;

@@ -214,8 +214,6 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
           showdown_result: gameState.showdown_result ?? null,
           pots: potBreakdown,
           hand_id: gameState.hand_id,
-          game_mode: gameState.game_mode ?? "pips",
-          pending_game_mode: gameState.pending_game_mode ?? null,
         }
       : null;
 
@@ -226,56 +224,6 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       .order("created_at", { ascending: true })
       .limit(50);
 
-    // Hand history: the last several completed hands at this room, each with
-    // enough detail (game type, dealer seat, board, pot, winner(s), and
-    // per-player net chip change) for a simple history list. Built from
-    // `hands` + `hand_players` rather than a dedicated table since those
-    // already capture everything needed once a hand is hand_complete.
-    const { data: recentHands } = await supabase
-      .from("hands")
-      .select("id, hand_number, game_mode, dealer_seat, pot, completed_at")
-      .eq("room_id", roomId)
-      .eq("phase", "hand_complete")
-      .order("hand_number", { ascending: false })
-      .limit(10);
-
-    let handHistory: unknown[] = [];
-    if (recentHands && recentHands.length > 0) {
-      const handIds = recentHands.map((h) => h.id);
-      const { data: allHistHandPlayers } = await supabase
-        .from("hand_players")
-        .select(
-          "hand_id, seat, display_name, status, total_committed, amount_won, has_swapped, swapped_count, revealed_pip_total, mucked"
-        )
-        .in("hand_id", handIds);
-
-      handHistory = recentHands.map((h) => {
-        const hps = (allHistHandPlayers ?? []).filter((hp) => hp.hand_id === h.id);
-        const winners = hps.filter((hp) => hp.amount_won > 0);
-        const swappedCount = hps.filter((hp) => hp.has_swapped && (hp.swapped_count ?? 0) > 0).length;
-        const pipWinner = h.game_mode === "pips" ? hps.find((hp) => hp.revealed_pip_total !== null && !hp.mucked) : null;
-        return {
-          handId: h.id,
-          handNumber: h.hand_number,
-          gameMode: h.game_mode ?? "pips",
-          dealerSeat: h.dealer_seat,
-          pot: h.pot,
-          completedAt: h.completed_at,
-          winners: winners.map((w) => ({ displayName: w.display_name, seat: w.seat, amountWon: w.amount_won })),
-          players: hps.map((hp) => ({
-            displayName: hp.display_name,
-            seat: hp.seat,
-            netChange: (hp.amount_won ?? 0) - (hp.total_committed ?? 0),
-          })),
-          cardsSwappedCount: h.game_mode === "pips" ? swappedCount : null,
-          pipWinner:
-            h.game_mode === "pips" && pipWinner
-              ? { displayName: pipWinner.display_name, pipTotal: pipWinner.revealed_pip_total }
-              : null,
-        };
-      });
-    }
-
     return NextResponse.json({
       room,
       players,
@@ -284,7 +232,6 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       myHoleCards,
       myUserId: user.id,
       chatMessages: chatMessages ?? [],
-      handHistory,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unexpected error";
