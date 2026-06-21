@@ -113,7 +113,7 @@ export function ShowdownSummary({
   return (
     <div className="mx-auto flex max-h-full w-full max-w-5xl flex-col gap-3 overflow-y-auto rounded-lg border border-black/50 bg-zinc-900 p-8">
       <h2 className="mb-2 text-center text-xl font-semibold uppercase tracking-wide text-chip-gold">
-        {result?.ranItTwice ? "Showdown · Run it twice" : "Showdown"}
+        {result?.ranItTwice ? "Hand Results · Run it twice" : "Hand Results"}
       </h2>
 
       {/* Shared flop cards in a row, shown once face-up with no animation;

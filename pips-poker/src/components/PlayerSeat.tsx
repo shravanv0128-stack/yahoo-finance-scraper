@@ -68,7 +68,7 @@ export function PlayerSeat({
 
   return (
     <div
-      className={`flex flex-col items-center gap-2 rounded-2xl transition-all duration-300 ${
+      className={`flex flex-col items-center gap-3 rounded-2xl transition-all duration-300 ${
         folded || busted ? "opacity-50" : ""
       } ${isActingSeat ? "bg-yellow-400/10 px-3 py-3 ring-2 ring-yellow-300 shadow-[0_0_24px_6px_rgba(250,204,21,0.45)]" : ""}`}
     >
@@ -122,9 +122,9 @@ export function PlayerSeat({
 
       {/* PokerNow-style rectangular name plate: name on top, stack below,
           with the dealer button and all-in badge pinned to its corners. */}
-      <div className="relative">
+      <div className="relative p-1.5">
         {isWinner && (
-          <div className="absolute -inset-1 rounded-md ring-2 ring-yellow-300 shadow-[0_0_12px_3px_rgba(250,204,21,0.6)]" />
+          <div className="absolute inset-0 rounded-md ring-2 ring-yellow-300 shadow-[0_0_12px_3px_rgba(250,204,21,0.6)]" />
         )}
         <div
           className={`relative flex min-w-[8rem] flex-col items-center gap-0.5 rounded-md border bg-zinc-900/95 px-4 py-2 text-center shadow-md ${

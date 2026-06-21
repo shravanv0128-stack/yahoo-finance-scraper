@@ -72,13 +72,14 @@ export default function RoomPage() {
   const [showdownVisible, setShowdownVisible] = useState(false);
   useEffect(() => {
     const gs = data?.gameState;
-    // The full showdown breakdown popup is only worth showing when the hand
-    // went through an all-in pause (run it once or run it twice) - that's
-    // the one case with a runout/board reveal sequence actually worth
-    // narrating. A normal hand that just plays out to the river, or one
-    // that ends because everyone else folded, doesn't get the popup; the
-    // table itself (revealed cards + the winner halo) already shows who won.
-    if (gs?.phase === "hand_complete" && gs.showdown_result?.wasAllInRunout) {
+    // The full breakdown popup is worth showing any time the hand was
+    // actually contested by more than one player all the way to a result -
+    // whether that came from an all-in runout or from everyone just
+    // betting/checking through to the river - so the table knows who had
+    // the best hand and best pips and who's getting paid. It's skipped only
+    // when the hand was uncontested (everyone else folded), since there's
+    // nothing to compare in that case.
+    if (gs?.phase === "hand_complete" && gs.showdown_result && !gs.showdown_result.uncontested) {
       setShowdownSnapshot({
         result: gs.showdown_result,
         handId: gs.hand_id,
