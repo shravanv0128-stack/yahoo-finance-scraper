@@ -68,12 +68,12 @@ export function PlayerSeat({
 
   return (
     <div
-      className={`flex flex-col items-center gap-1.5 rounded-2xl transition-all duration-300 ${
+      className={`flex flex-col items-center gap-2 rounded-2xl transition-all duration-300 ${
         folded || busted ? "opacity-50" : ""
-      } ${isActingSeat ? "bg-yellow-400/10 px-2 py-2 ring-2 ring-yellow-300 shadow-[0_0_28px_8px_rgba(250,204,21,0.55)]" : ""}`}
+      } ${isActingSeat ? "bg-yellow-400/10 px-3 py-3 ring-2 ring-yellow-300 shadow-[0_0_24px_6px_rgba(250,204,21,0.45)]" : ""}`}
     >
       {isActingSeat && (
-        <div className="animate-pulse rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_12px_3px_rgba(250,204,21,0.8)]">
+        <div className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_10px_2px_rgba(250,204,21,0.6)]">
           {isMe ? "Your turn" : "Acting"}
         </div>
       )}
