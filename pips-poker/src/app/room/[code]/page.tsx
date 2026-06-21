@@ -72,7 +72,11 @@ export default function RoomPage() {
   const [showdownVisible, setShowdownVisible] = useState(false);
   useEffect(() => {
     const gs = data?.gameState;
-    if (gs?.phase === "hand_complete") {
+    // Skip the showdown overlay entirely when everyone else folded - there's
+    // no hand to compare or cards to reveal, so the popup would just say
+    // "X wins" with nothing else to show. The pot already moved to the
+    // winner's stack; the table itself is enough.
+    if (gs?.phase === "hand_complete" && !gs.showdown_result?.uncontested) {
       setShowdownSnapshot({
         result: gs.showdown_result,
         handId: gs.hand_id,
