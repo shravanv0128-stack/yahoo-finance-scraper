@@ -314,6 +314,11 @@ export default function RoomPage() {
   const visiblePlayers = isHandLive ? activePlayers : activePlayers.filter((p) => p.chip_stack > 0);
   const eligiblePlayers = players.filter((p) => p.is_active && !p.is_away && p.chip_stack > 0);
 
+  // Right after a hand ends, whoever actually took chips gets a halo +
+  // enlarged cards on their seat (see PlayerSeat) - the only winner
+  // indication for uncontested hands, since those skip the showdown popup.
+  const isHandComplete = gameState?.phase === "hand_complete";
+
   const seats: TableSeatData[] = visiblePlayers.map((p) => {
     const hp = hpBySeat.get(p.seat);
     const isMe = p.user_id === myUserId;
@@ -329,6 +334,7 @@ export default function RoomPage() {
       revealedCards: hp?.revealed_cards ?? null,
       revealedPipTotal: hp?.revealed_pip_total ?? null,
       swappedCount: hp?.has_swapped ? hp.swapped_count ?? 0 : null,
+      isWinner: isHandComplete && (hp?.amount_won ?? 0) > 0,
     };
   });
 
@@ -357,7 +363,7 @@ export default function RoomPage() {
   const kickTargets = activePlayers.filter((p) => p.user_id !== leaderId);
 
   return (
-    <main className="flex min-h-screen flex-col bg-felt-dark">
+    <main className="flex h-screen flex-col overflow-hidden bg-felt-dark">
       <header className="flex items-center justify-between border-b border-neon/15 bg-black/60 px-4 py-3 text-white backdrop-blur-sm">
         <div className="flex items-center gap-6">
           <span className="text-xl font-black tracking-wider text-neon drop-shadow-[0_0_8px_rgba(57,255,140,0.7)]">
@@ -559,7 +565,7 @@ export default function RoomPage() {
         </div>
       )}
 
-      <div className="relative flex flex-1 items-center justify-center px-4 py-6 pb-24">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-4 py-3">
         <Table
           seats={seats}
           dealerSeat={gameState?.dealer_seat ?? 0}
@@ -617,7 +623,7 @@ export default function RoomPage() {
       )}
 
       {amSeated && (
-        <div className="flex w-full flex-col items-stretch gap-3 border-t border-white/10 bg-black/40 px-4 py-3 sm:flex-row">
+        <div className="flex w-full flex-shrink-0 flex-col items-stretch gap-3 border-t border-white/10 bg-black/40 px-4 py-3 sm:flex-row">
           <ChatPanel messages={chatMessages} myUserId={myUserId} disabled={busy} onSend={handleSendChat} />
 
           <div className="flex flex-1 items-stretch">

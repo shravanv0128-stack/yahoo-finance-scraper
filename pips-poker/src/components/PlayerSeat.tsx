@@ -20,6 +20,11 @@ export interface PlayerSeatProps {
   communityCards?: CardType[];
   actDeadline?: string | null;
   actTimeoutSeconds?: number;
+  // True for a few seconds right after this player takes the pot - shows a
+  // spinning gold halo behind their avatar and enlarges their cards, so it's
+  // obvious who won without needing the full showdown popup (used for
+  // uncontested hands, where there's nothing else to show).
+  isWinner?: boolean;
 }
 
 // A single seat around the oval felt table: avatar circle with name, chip
@@ -42,6 +47,7 @@ export function PlayerSeat({
   communityCards,
   actDeadline = null,
   actTimeoutSeconds = 60,
+  isWinner = false,
 }: PlayerSeatProps) {
   const cardsToShow = revealedCards ?? (isMe ? holeCards : null);
   const showFaceUp = revealedCards !== null || isMe;
@@ -78,8 +84,8 @@ export function PlayerSeat({
             key={i}
             card={cardsToShow?.[i] ?? undefined}
             faceDown={!showFaceUp || !cardsToShow?.[i]}
-            size={isMe && isActingSeat ? "lg" : isMe ? "md" : "sm"}
-            highlight={isActingSeat}
+            size={isWinner ? "lg" : isMe && isActingSeat ? "lg" : isMe ? "md" : "sm"}
+            highlight={isActingSeat || isWinner}
           />
         ))}
       </div>
@@ -104,13 +110,26 @@ export function PlayerSeat({
         </div>
       )}
 
+      <div className="relative">
+        {isWinner && (
+          <div
+            className="animate-spin absolute -inset-2.5 rounded-full opacity-90 blur-[2px]"
+            style={{
+              background:
+                "conic-gradient(from 0deg, #fde68a, #f59e0b, #fde68a 50%, transparent 75%, #fde68a)",
+              animationDuration: "2.5s",
+            }}
+          />
+        )}
       <div
         className={`relative flex flex-col items-center justify-center rounded-full border bg-gradient-to-b from-zinc-800/90 via-black/90 to-black text-center backdrop-blur-sm transition-all ${
-          isMe && isActingSeat ? "h-20 w-20" : "h-16 w-16"
+          isMe && isActingSeat ? "h-24 w-24" : "h-20 w-20"
         } ${
-          isActingSeat
-            ? "border-amber-300/80 shadow-[0_0_10px_2px_rgba(251,191,36,0.4)]"
-            : "border-neon/50 shadow-neon"
+          isWinner
+            ? "border-amber-300 shadow-[0_0_16px_4px_rgba(251,191,36,0.6)]"
+            : isActingSeat
+              ? "border-amber-300/80 shadow-[0_0_10px_2px_rgba(251,191,36,0.4)]"
+              : "border-neon/50 shadow-neon"
         }`}
       >
         {isDealer && (
@@ -127,6 +146,7 @@ export function PlayerSeat({
             ALL IN
           </span>
         )}
+      </div>
       </div>
 
       <div className="rounded-full border border-neon/30 bg-black/60 px-2 py-0.5 text-xs font-semibold text-neon">

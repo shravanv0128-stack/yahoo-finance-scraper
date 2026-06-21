@@ -23,6 +23,7 @@ export interface TableSeatData {
   revealedCards: Card[] | null;
   revealedPipTotal: number | null;
   swappedCount: number | null;
+  isWinner?: boolean;
 }
 
 export interface TableProps {
@@ -78,7 +79,7 @@ export function Table({
         })();
 
   return (
-    <div className="relative mx-auto aspect-[16/10] w-full max-w-4xl">
+    <div className="relative mx-auto aspect-[16/10] w-full max-w-5xl max-h-full">
       {/* Outer glow halo behind the whole table, like light bleeding off a
           backlit panel. */}
       <div className="absolute inset-[2%] rounded-[50%] bg-neon/5 blur-3xl" />
@@ -120,6 +121,7 @@ export function Table({
               revealedCards={s.revealedCards}
               revealedPipTotal={s.revealedPipTotal}
               swappedCount={s.swappedCount}
+              isWinner={s.isWinner}
               communityCards={communityCards}
               actDeadline={s.isActingSeat ? actDeadline : null}
               actTimeoutSeconds={actTimeoutSeconds}

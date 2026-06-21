@@ -13,7 +13,7 @@ import { syncRoomLeader } from "@/lib/roomLeader";
 // How long the completed-hand summary stays on screen before the next hand
 // is dealt automatically. Long enough to read who won (and to watch both
 // boards when the hand was run twice).
-const AUTO_NEXT_HAND_MS = 6000;
+const AUTO_NEXT_HAND_MS = 7000;
 // Hands that were run it twice show two boards in sequence (see revealStage
 // in the room page) and a more involved showdown breakdown, so they get
 // extra time on screen before the table auto-advances.
