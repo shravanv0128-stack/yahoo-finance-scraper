@@ -10,9 +10,21 @@ const SUIT_SYMBOLS: Record<CardType["suit"], string> = {
 const RED_SUITS: CardType["suit"][] = ["hearts", "diamonds"];
 
 const SIZE_CLASSES: Record<"sm" | "md" | "lg", string> = {
-  sm: "h-14 w-10 text-sm",
-  md: "h-24 w-[4.25rem] text-xl",
-  lg: "h-28 w-20 text-2xl",
+  sm: "h-16 w-12",
+  md: "h-28 w-20",
+  lg: "h-32 w-[5.75rem]",
+};
+
+const RANK_TEXT_CLASSES: Record<"sm" | "md" | "lg", string> = {
+  sm: "text-xl",
+  md: "text-3xl",
+  lg: "text-4xl",
+};
+
+const SUIT_TEXT_CLASSES: Record<"sm" | "md" | "lg", string> = {
+  sm: "text-2xl",
+  md: "text-4xl",
+  lg: "text-5xl",
 };
 
 export function Card({
@@ -64,10 +76,12 @@ export function Card({
         >
           {card && (
             <>
-              <span className={`font-bold leading-tight ${isRed ? "text-chip-red" : "text-chip-black"}`}>
+              <span
+                className={`font-extrabold leading-none ${RANK_TEXT_CLASSES[size]} ${isRed ? "text-chip-red" : "text-chip-black"}`}
+              >
                 {card.rank}
               </span>
-              <span className={`leading-tight ${isRed ? "text-chip-red" : "text-chip-black"}`}>
+              <span className={`leading-none ${SUIT_TEXT_CLASSES[size]} ${isRed ? "text-chip-red" : "text-chip-black"}`}>
                 {SUIT_SYMBOLS[card.suit]}
               </span>
             </>
