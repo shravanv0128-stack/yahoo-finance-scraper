@@ -95,10 +95,17 @@ export function ShowdownSummary({
     return next;
   }, 0);
 
-  // One shared reveal clock across every board's differing cards, in order:
-  // board 1's cards all flip (one by one) before board 2's first card does.
-  const [revealedCount, setRevealedCount] = useState(0);
+  // The staggered card-by-card reveal only matters for a run-it-twice hand,
+  // where seeing each board's runout play out distinguishes the two boards.
+  // A normal single-board hand just shows everything immediately - there's
+  // nothing to narrate, so don't make people wait to see the results.
+  const ranItTwice = result?.ranItTwice ?? false;
+  const [revealedCount, setRevealedCount] = useState(ranItTwice ? 0 : totalDiffering);
   useEffect(() => {
+    if (!ranItTwice) {
+      setRevealedCount(totalDiffering);
+      return;
+    }
     setRevealedCount(0);
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < totalDiffering; i++) {
@@ -106,7 +113,7 @@ export function ShowdownSummary({
     }
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handId, totalDiffering]);
+  }, [handId, totalDiffering, ranItTwice]);
 
   if (boards.length === 0 && shown.length === 0) return null;
 
@@ -189,25 +196,27 @@ export function ShowdownSummary({
               </p>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded bg-black/30 px-4 py-3">
-                  <p className="mb-1.5 text-sm font-bold uppercase tracking-wide text-amber-300">
-                    🂡 Best poker hand
+                <div className="rounded-md border border-amber-300/40 bg-black/40 px-4 py-3">
+                  <p className="mb-2 text-center text-base font-extrabold uppercase tracking-wide text-amber-300">
+                    Best Hand
                   </p>
                   {groupWinners(b.pokerWinners, (w) => w.handLabel).map((g, j) => (
-                    <p key={j} className="text-base text-white">
-                      <span className="font-semibold">{joinNames(g.displayNames)}</span>
-                      <span className="text-white/50"> — {g.key}</span>
+                    <p key={j} className="text-center text-lg leading-snug text-white">
+                      <span className="font-bold">{joinNames(g.displayNames)}</span>
+                      <br />
+                      <span className="text-sm text-white/60">{g.key}</span>
                     </p>
                   ))}
                 </div>
-                <div className="rounded bg-black/30 px-4 py-3">
-                  <p className="mb-1.5 text-sm font-bold uppercase tracking-wide text-chip-blue">
-                    ◆ Highest pips
+                <div className="rounded-md border border-chip-blue/40 bg-black/40 px-4 py-3">
+                  <p className="mb-2 text-center text-base font-extrabold uppercase tracking-wide text-chip-blue">
+                    Best Pips
                   </p>
                   {groupWinners(b.pipWinners, (w) => `${w.pipTotal} pips`).map((g, j) => (
-                    <p key={j} className="text-base text-white">
-                      <span className="font-semibold">{joinNames(g.displayNames)}</span>
-                      <span className="text-white/50"> — {g.key}</span>
+                    <p key={j} className="text-center text-lg leading-snug text-white">
+                      <span className="font-bold">{joinNames(g.displayNames)}</span>
+                      <br />
+                      <span className="text-sm text-white/60">{g.key}</span>
                     </p>
                   ))}
                 </div>

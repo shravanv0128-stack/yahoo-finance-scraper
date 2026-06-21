@@ -50,9 +50,10 @@ function ellipsePosition(index: number, total: number): { left: string; top: str
   // The bottom seat (always the viewer's own) grows tallest - turn badge,
   // bigger cards, timer bar, hand ribbon, name plate - and since seats are
   // centered on this point, that height grows upward into the community
-  // cards too. Push it down further than the ellipse alone would so it
-  // never overlaps the board, even mid-hand with the "your turn" badge up.
-  if (index === 0) y += 10;
+  // cards too. Push it down a bit further than the ellipse alone would so
+  // it never overlaps the board, even mid-hand with the "your turn" badge
+  // up - but not so far it runs into the bottom edge of the felt/page.
+  if (index === 0) y += 4;
   return { left: `${x}%`, top: `${y}%` };
 }
 

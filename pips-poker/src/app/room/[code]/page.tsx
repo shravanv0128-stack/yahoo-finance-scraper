@@ -591,7 +591,7 @@ export default function RoomPage() {
           // server has already dealt face-up by the time hand_complete fires
           // - can never be glimpsed through it while only the inner panel
           // fades in/out.
-          <div className={`absolute inset-0 z-10 flex items-center justify-center bg-black p-4 ${showdownVisible ? "" : "pointer-events-none"}`}>
+          <div className={`fixed inset-0 z-20 flex items-center justify-center bg-black p-4 ${showdownVisible ? "" : "pointer-events-none"}`}>
             <div className={`transition-opacity duration-300 ${showdownVisible ? "opacity-100" : "opacity-0"}`}>
               <ShowdownSummary
                 result={showdownSnapshot.result}
@@ -606,7 +606,7 @@ export default function RoomPage() {
             cards, and the stand-pat/swap buttons are all visible together
             with no scrolling. */}
         {isSwapPhase && myHandPlayer && myHandPlayer.status === "active" && !myHandPlayer.has_swapped && myHoleCards && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/75 p-4">
+          <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/75 p-4">
             <DrawSwapControls
               holeCards={myHoleCards}
               communityCards={gameState?.community_cards ?? []}
