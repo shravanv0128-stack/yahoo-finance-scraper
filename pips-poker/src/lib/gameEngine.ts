@@ -241,6 +241,16 @@ export async function applyBettingAction(
     .order("seat", { ascending: true });
   if (hpError) throw hpError;
 
+  // Reject acting out of turn. The API route only verifies the caller owns
+  // handPlayerId (so they can never act as someone else), but without this
+  // check any seated player could still fire an action whenever they liked
+  // regardless of whose turn the game actually thinks it is - skipping
+  // ahead of other players, acting multiple times in a row, etc.
+  const actingPlayer = (handPlayers as HandPlayerRow[]).find((p) => p.id === handPlayerId);
+  if (!actingPlayer || actingPlayer.seat !== gameState.active_seat) {
+    throw new Error("It's not your turn to act");
+  }
+
   const bettingState = toBettingState(
     handPlayers as HandPlayerRow[],
     gameState.pot,

@@ -18,6 +18,18 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getServiceRoleClient();
+
+    const { data: seat } = await supabase
+      .from("players")
+      .select("id")
+      .eq("room_id", roomId)
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!seat) {
+      return NextResponse.json({ error: "You must be seated in this room to start a hand" }, { status: 403 });
+    }
+
     const result = await startNewHand(supabase, roomId);
     return NextResponse.json(result);
   } catch (e) {

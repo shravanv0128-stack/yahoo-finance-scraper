@@ -199,17 +199,25 @@ create policy "users send their own chat messages" on chat_messages
 create policy "users read only their own hole cards" on hole_cards
   for select using (auth.uid() = user_id);
 
--- Players manage their own seat (choosing a display name, sitting out).
--- All game-affecting mutations (dealing, betting, pot/chip updates,
--- advancing phases) are performed server-side with the service role key,
--- which bypasses RLS entirely.
-create policy "users manage their own seat" on players
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- Players never write their own seat directly from the browser - every
+-- game-affecting mutation (dealing, betting, pot/chip updates, sitting
+-- in/out, advancing phases) goes through an app/api/** route, which
+-- authenticates the caller then uses the service-role key (bypasses RLS)
+-- to make the change after validating it server-side. Deliberately no
+-- insert/update/delete policy is granted on `players` to authenticated
+-- clients: a permissive "auth.uid() = user_id" write policy here would let
+-- any signed-in browser client call the Supabase REST API directly to
+-- rewrite their own chip_stack/is_active/buy_in (etc.) and bypass every
+-- game rule the server enforces, even though no legitimate code path ever
+-- needs to write this table from the client.
 
 -- Anyone authenticated may create a room (room creation is the entry point
--- for the "create room" flow on the home page).
+-- for the "create room" flow on the home page), but only as themselves -
+-- without the with-check below, a client could insert a row claiming
+-- `created_by` is some other user's id and so impersonate them as the
+-- room's creator/leader.
 create policy "authenticated users can create rooms" on rooms
-  for insert with check (auth.role() = 'authenticated');
+  for insert with check (auth.role() = 'authenticated' and auth.uid() = created_by);
 
 create index if not exists players_room_id_idx on players (room_id);
 create index if not exists hands_room_id_idx on hands (room_id);
@@ -268,3 +276,20 @@ alter table game_state add column if not exists community_cards_2 jsonb;
 -- Run this once to let the room leader pause the action clock:
 -- alter table game_state add column if not exists is_paused boolean not null default false;
 -- alter table game_state add column if not exists paused_at timestamptz;
+
+-- ============================================================================
+-- SECURITY FIX - run this against any existing database created before this
+-- fix: it removes a policy that let any signed-in browser client write
+-- directly to their own `players` row (chip_stack, is_active, buy_in, etc.)
+-- via the Supabase REST API, completely bypassing the server's game-rule
+-- enforcement (e.g. self-crediting chips, un-busting, un-kicking). No
+-- legitimate client code path ever wrote this table directly - all
+-- mutations already went through app/api/** routes using the service-role
+-- key, so dropping the policy is purely a tightening with no functional
+-- loss. Also pins room creation to the caller's own auth.uid(), so a room
+-- can't be inserted claiming a different user as its creator/leader.
+-- ============================================================================
+drop policy if exists "users manage their own seat" on players;
+drop policy if exists "authenticated users can create rooms" on rooms;
+create policy "authenticated users can create rooms" on rooms
+  for insert with check (auth.role() = 'authenticated' and auth.uid() = created_by);
