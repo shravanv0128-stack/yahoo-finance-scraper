@@ -95,14 +95,16 @@ export function ShowdownSummary({
     return next;
   }, 0);
 
-  // The staggered card-by-card reveal only matters for a run-it-twice hand,
-  // where seeing each board's runout play out distinguishes the two boards.
-  // A normal single-board hand just shows everything immediately - there's
-  // nothing to narrate, so don't make people wait to see the results.
-  const ranItTwice = result?.ranItTwice ?? false;
-  const [revealedCount, setRevealedCount] = useState(ranItTwice ? 0 : totalDiffering);
+  // The staggered card-by-card reveal narrates an all-in runout - whether
+  // that was run once or run twice, there were cards still left to come
+  // when the players got all-in, so watching them land card-by-card is the
+  // whole point. A normal hand that just bet/checked its way to the river
+  // already saw every card go down live, so there's nothing left to
+  // narrate - show the results immediately instead of making people wait.
+  const animateReveal = result?.wasAllInRunout ?? false;
+  const [revealedCount, setRevealedCount] = useState(animateReveal ? 0 : totalDiffering);
   useEffect(() => {
-    if (!ranItTwice) {
+    if (!animateReveal) {
       setRevealedCount(totalDiffering);
       return;
     }
@@ -113,7 +115,7 @@ export function ShowdownSummary({
     }
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handId, totalDiffering, ranItTwice]);
+  }, [handId, totalDiffering, animateReveal]);
 
   if (boards.length === 0 && shown.length === 0) return null;
 
