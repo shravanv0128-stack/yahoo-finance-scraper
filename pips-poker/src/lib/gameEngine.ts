@@ -529,11 +529,20 @@ export async function applyBettingAction(
           .eq("id", p.hand_player_id);
       }
     }
-    nextActiveSeat = newPhase === "all_in_runout" || newPhase === "showdown"
-      ? null
-      : activePlayers.length > 0
-        ? activePlayers[0].seat
-        : null;
+    if (newPhase === "all_in_runout" || newPhase === "showdown" || activePlayers.length === 0) {
+      nextActiveSeat = null;
+    } else if (gameMode === "holdem") {
+      // Post-flop action in Hold'em starts with the first active seat
+      // clockwise after the dealer/button, not whichever seat number happens
+      // to be lowest (which is what Pips uses, since it has no button-relative
+      // betting order).
+      const seatOrder = activePlayers.map((p) => p.seat).sort((a, b) => a - b);
+      const dealerSeat: number = gameState.dealer_seat ?? 0;
+      const after = seatOrder.find((s) => s > dealerSeat);
+      nextActiveSeat = after !== undefined ? after : seatOrder[0];
+    } else {
+      nextActiveSeat = activePlayers[0].seat;
+    }
   } else {
     // Advance active_seat to the next contender in seat order who can still act.
     const ordered = result.state.players.slice().sort((a, b) => a.seat - b.seat);
