@@ -5,12 +5,19 @@ import { useEffect, useState } from "react";
 // A thin countdown bar, sized to match the card row above it, that drains
 // from full to empty as the acting player's clock runs out - much easier to
 // catch out of the corner of your eye than a small number in the header.
-export function TurnTimerBar({ deadline, totalSeconds }: { deadline: string | null; totalSeconds: number }) {
+export function TurnTimerBar({
+  deadline,
+  totalSeconds,
+  paused = false,
+}: {
+  deadline: string | null;
+  totalSeconds: number;
+  paused?: boolean;
+}) {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!deadline) {
-      setSecondsLeft(null);
+    if (!deadline || paused) {
       return;
     }
     const update = () => {
@@ -20,12 +27,28 @@ export function TurnTimerBar({ deadline, totalSeconds }: { deadline: string | nu
     update();
     const interval = setInterval(update, 100);
     return () => clearInterval(interval);
-  }, [deadline]);
+  }, [deadline, paused]);
 
-  if (secondsLeft === null) return null;
+  if (secondsLeft === null && !paused) return null;
 
-  const pct = Math.max(0, Math.min(100, (secondsLeft / totalSeconds) * 100));
-  const isLow = secondsLeft <= 10;
+  // While paused, freeze the bar at whatever it last showed (instead of
+  // continuing to drain) and swap in a clear "Paused" label so it's obvious
+  // the clock isn't actually running out.
+  if (paused) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/50">
+          <div className="h-full rounded-full bg-yellow-400/70" style={{ width: "100%" }} />
+        </div>
+        <span className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide text-yellow-300">
+          Paused
+        </span>
+      </div>
+    );
+  }
+
+  const pct = Math.max(0, Math.min(100, ((secondsLeft ?? 0) / totalSeconds) * 100));
+  const isLow = (secondsLeft ?? 0) <= 10;
 
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/50">

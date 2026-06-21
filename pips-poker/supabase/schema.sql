@@ -132,6 +132,13 @@ create table if not exists game_state (
   last_aggressor_seat integer,
   awaiting_show_decision boolean not null default false,
   showdown_result jsonb,
+  -- True when the room leader has paused the action clock (e.g. someone
+  -- went AFK). While paused, enforceActTimeout never auto-folds/checks and
+  -- the auto-deal-next-hand timer doesn't advance. paused_at records when
+  -- the pause started so resuming can push act_deadline forward by however
+  -- long the pause lasted, instead of it firing immediately.
+  is_paused boolean not null default false,
+  paused_at timestamptz,
   updated_at timestamptz not null default now()
 );
 -- Run this once against an existing database to add show/muck tracking:
@@ -258,3 +265,6 @@ alter table game_state add column if not exists community_cards_2 jsonb;
 -- create policy "users send their own chat messages" on chat_messages for insert with check (auth.uid() = user_id);
 -- create index if not exists chat_messages_room_id_idx on chat_messages (room_id);
 -- alter publication supabase_realtime add table chat_messages;
+-- Run this once to let the room leader pause the action clock:
+-- alter table game_state add column if not exists is_paused boolean not null default false;
+-- alter table game_state add column if not exists paused_at timestamptz;

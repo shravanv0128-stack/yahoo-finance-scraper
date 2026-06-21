@@ -88,6 +88,7 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       : AUTO_NEXT_HAND_MS;
     if (
       gameState?.phase === "hand_complete" &&
+      !gameState.is_paused &&
       gameState.updated_at &&
       Date.now() - new Date(gameState.updated_at).getTime() >= autoNextHandMs
     ) {
@@ -208,6 +209,7 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
           dealer_seat: gameState.dealer_seat,
           active_seat: gameState.active_seat,
           act_deadline: gameState.act_deadline,
+          is_paused: gameState.is_paused ?? false,
           awaiting_run_it_twice: gameState.awaiting_run_it_twice,
           run_it_twice_votes: gameState.run_it_twice_votes ?? {},
           community_cards_2: gameState.community_cards_2,

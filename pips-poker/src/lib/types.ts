@@ -104,6 +104,8 @@ export interface GameStateRow {
   community_cards_2: Card[] | null; // second board, only populated when run-it-twice was chosen
   last_aggressor_seat: number | null; // last bettor/raiser in the current betting round, reset each new round
   awaiting_show_decision: boolean; // true during the "showdown" phase while contenders take turns choosing show/muck
+  is_paused: boolean; // true when the room leader has paused the action clock (e.g. someone's AFK)
+  paused_at: string | null; // ISO timestamp the pause started, used to push act_deadline forward by the pause duration on resume
   updated_at: string;
 }
 

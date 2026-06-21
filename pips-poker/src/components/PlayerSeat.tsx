@@ -20,6 +20,7 @@ export interface PlayerSeatProps {
   communityCards?: CardType[];
   actDeadline?: string | null;
   actTimeoutSeconds?: number;
+  isPaused?: boolean;
   // True for a few seconds right after this player takes the pot - shows a
   // spinning gold halo behind their avatar and enlarges their cards, so it's
   // obvious who won without needing the full showdown popup (used for
@@ -47,6 +48,7 @@ export function PlayerSeat({
   communityCards,
   actDeadline = null,
   actTimeoutSeconds = 60,
+  isPaused = false,
   isWinner = false,
 }: PlayerSeatProps) {
   const cardsToShow = revealedCards ?? (isMe ? holeCards : null);
@@ -85,11 +87,14 @@ export function PlayerSeat({
           folded hands, and anyone's revealed cards at showdown, always
           fan out fully (folded gets the dimmed cross overlay on top). */}
       {!isMe && !showFaceUp && !isActingSeat && !folded ? (
-        <div className="relative flex h-16 w-12 items-center justify-center">
-          <div className="absolute -rotate-6">
+        <div className="relative flex h-16 w-14 items-center justify-center">
+          <div className="absolute -translate-x-2 rotate-[-9deg]">
             <Card faceDown size="sm" />
           </div>
-          <div className="absolute translate-x-1.5 rotate-6">
+          <div className="absolute">
+            <Card faceDown size="sm" />
+          </div>
+          <div className="absolute translate-x-2 rotate-[9deg]">
             <Card faceDown size="sm" />
           </div>
         </div>
@@ -119,7 +124,7 @@ export function PlayerSeat({
 
       {isActingSeat && (
         <div className="w-full px-0.5">
-          <TurnTimerBar deadline={actDeadline} totalSeconds={actTimeoutSeconds} />
+          <TurnTimerBar deadline={actDeadline} totalSeconds={actTimeoutSeconds} paused={isPaused} />
         </div>
       )}
 

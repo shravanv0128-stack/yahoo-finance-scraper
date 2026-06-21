@@ -36,6 +36,7 @@ export interface TableProps {
   mySeat: number | null;
   actDeadline?: string | null;
   actTimeoutSeconds?: number;
+  isPaused?: boolean;
 }
 
 // Returns evenly spaced [x%, y%] positions around an ellipse, starting from
@@ -67,6 +68,7 @@ export function Table({
   mySeat,
   actDeadline = null,
   actTimeoutSeconds = 60,
+  isPaused = false,
 }: TableProps) {
   // Rotate the seat order so the viewer's own seat is always index 0
   // (bottom-center), matching PokerNow's "you are always at the bottom".
@@ -118,6 +120,7 @@ export function Table({
               communityCards={communityCards}
               actDeadline={s.isActingSeat ? actDeadline : null}
               actTimeoutSeconds={actTimeoutSeconds}
+              isPaused={isPaused}
             />
           </div>
         );

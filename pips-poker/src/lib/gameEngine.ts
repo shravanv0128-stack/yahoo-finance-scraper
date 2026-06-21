@@ -405,6 +405,7 @@ export async function enforceActTimeout(supabase: SupabaseClient, roomId: string
     .maybeSingle();
   if (gsError) throw gsError;
   if (!gameState || !gameState.hand_id) return;
+  if (gameState.is_paused) return;
   if (!["flop_betting", "turn_betting", "river_betting"].includes(gameState.phase)) return;
   if (gameState.active_seat === null || !gameState.act_deadline) return;
   if (new Date(gameState.act_deadline).getTime() > Date.now()) return;
@@ -1040,4 +1041,42 @@ function distributeShare<T extends { hand_player_id: string; seat: number }>(
     const current = winnings.get(w.hand_player_id) ?? 0;
     winnings.set(w.hand_player_id, current + shareCents / 100);
   });
+}
+
+/**
+ * Lets the room leader pause/resume the action clock (e.g. when someone's
+ * AFK and about to get auto-folded). While paused, enforceActTimeout above
+ * is a no-op and the client hides/freezes the turn timer. On resume, any
+ * in-progress act_deadline is pushed forward by exactly how long the pause
+ * lasted, so the player whose turn it was doesn't get auto-acted on the
+ * instant play resumes.
+ */
+export async function setRoomPaused(supabase: SupabaseClient, roomId: string, paused: boolean) {
+  const { data: gameState, error } = await supabase
+    .from("game_state")
+    .select("act_deadline, is_paused, paused_at")
+    .eq("room_id", roomId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!gameState) throw new Error("No game in progress for this room");
+
+  if (paused) {
+    if (gameState.is_paused) return;
+    await supabase
+      .from("game_state")
+      .update({ is_paused: true, paused_at: new Date().toISOString() })
+      .eq("room_id", roomId);
+    return;
+  }
+
+  if (!gameState.is_paused) return;
+  let nextActDeadline = gameState.act_deadline;
+  if (gameState.act_deadline && gameState.paused_at) {
+    const pausedMs = Date.now() - new Date(gameState.paused_at).getTime();
+    nextActDeadline = new Date(new Date(gameState.act_deadline).getTime() + Math.max(0, pausedMs)).toISOString();
+  }
+  await supabase
+    .from("game_state")
+    .update({ is_paused: false, paused_at: null, act_deadline: nextActDeadline })
+    .eq("room_id", roomId);
 }

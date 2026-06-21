@@ -275,6 +275,19 @@ export default function RoomPage() {
     }
   }
 
+  async function handleTogglePause(paused: boolean) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/rooms/pause`, { roomId, paused });
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to update pause state");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading && !data) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-felt-dark text-white">
@@ -418,6 +431,19 @@ export default function RoomPage() {
               className="rounded bg-green-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-green-500 disabled:opacity-40"
             >
               Start hand
+            </button>
+          )}
+          {isLeader && isHandLive && (
+            <button
+              onClick={() => handleTogglePause(!gameState?.is_paused)}
+              disabled={busy}
+              className={`rounded border px-3 py-2 text-xs font-semibold transition disabled:opacity-40 ${
+                gameState?.is_paused
+                  ? "border-yellow-400 bg-yellow-400 text-black"
+                  : "border-white/15 bg-zinc-800 text-white hover:border-yellow-400/50"
+              }`}
+            >
+              {gameState?.is_paused ? "Resume game" : "Pause game"}
             </button>
           )}
           {isLeader && transferTargets.length > 0 && (
@@ -579,7 +605,18 @@ export default function RoomPage() {
           mySeat={myPlayer?.seat ?? null}
           actDeadline={gameState?.act_deadline ?? null}
           actTimeoutSeconds={room.act_timeout_seconds ?? 60}
+          isPaused={gameState?.is_paused ?? false}
         />
+
+        {/* A clear "Game Paused" banner across the top of the felt whenever
+            the leader has paused the action clock, so it's obvious to
+            everyone (not just the player whose turn it is) why nothing's
+            counting down. */}
+        {gameState?.is_paused && (
+          <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full border border-yellow-400 bg-black/85 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-yellow-300 shadow-[0_0_10px_2px_rgba(250,204,21,0.4)]">
+            Game Paused
+          </div>
+        )}
 
         {/* Showdown summary as an overlay on top of the table, never pushing
             the page into a scroll. It fades in on arrival and fades out
@@ -635,7 +672,7 @@ export default function RoomPage() {
                 toCall={toCall}
                 chipStack={myHandPlayer.chip_stack}
                 pot={gameState?.pot ?? 0}
-                disabled={busy}
+                disabled={busy || !!gameState?.is_paused}
                 onAction={handleAction}
               />
             )}
