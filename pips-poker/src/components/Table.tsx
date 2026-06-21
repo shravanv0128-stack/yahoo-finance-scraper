@@ -44,15 +44,9 @@ function ellipsePosition(index: number, total: number): { left: string; top: str
   const angleStep = (2 * Math.PI) / total;
   const angle = Math.PI / 2 + index * angleStep; // start at bottom, go clockwise
   const rx = 44; // % of width
-  const ry = 34; // % of height
+  const ry = 30; // % of height
   const x = 50 + rx * Math.cos(angle);
-  let y = 50 + ry * Math.sin(angle);
-  // The bottom seat (always the viewer's own) grows tallest when it's their
-  // turn to act (turn badge + bigger cards + timer bar + hand label), and
-  // since seats are centered on this point, that extra height would grow
-  // upward into the community cards too. Push it down a bit more than the
-  // ellipse alone would to keep clearance from the board.
-  if (index === 0) y += 6;
+  const y = 50 + ry * Math.sin(angle);
   return { left: `${x}%`, top: `${y}%` };
 }
 
@@ -79,7 +73,7 @@ export function Table({
         })();
 
   return (
-    <div className="relative mx-auto h-full max-h-full w-full max-w-5xl" style={{ aspectRatio: "16/10" }}>
+    <div className="relative mx-auto h-full max-h-full w-full max-w-7xl" style={{ aspectRatio: "16/10" }}>
       {/* Flat PokerNow-style felt: a plain dark bezel ring around a solid
           green oval, no glow/bloom. */}
       <div className="absolute inset-[4%] rounded-[50%] bg-zinc-900" />

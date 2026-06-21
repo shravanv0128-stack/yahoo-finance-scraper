@@ -567,7 +567,7 @@ export default function RoomPage() {
         </div>
       )}
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-4 py-3">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-visible px-4 pb-2 pt-3">
         <Table
           seats={seats}
           dealerSeat={gameState?.dealer_seat ?? 0}

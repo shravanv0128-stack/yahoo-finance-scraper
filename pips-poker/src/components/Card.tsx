@@ -10,9 +10,9 @@ const SUIT_SYMBOLS: Record<CardType["suit"], string> = {
 const RED_SUITS: CardType["suit"][] = ["hearts", "diamonds"];
 
 const SIZE_CLASSES: Record<"sm" | "md" | "lg", string> = {
-  sm: "h-12 w-9 text-xs",
-  md: "h-20 w-14 text-base",
-  lg: "h-24 w-16 text-lg",
+  sm: "h-14 w-10 text-sm",
+  md: "h-24 w-[4.25rem] text-xl",
+  lg: "h-28 w-20 text-2xl",
 };
 
 export function Card({
