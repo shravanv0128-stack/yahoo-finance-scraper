@@ -21,12 +21,12 @@ export function CommunityBoard({ cards }: { cards: CardType[] }) {
   }, [cards.length]);
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-3">
       {Array.from({ length: 5 }).map((_, i) => {
         const isNewThisReveal = i >= baseline;
         const delay = isNewThisReveal ? (i - baseline) * REVEAL_STAGGER_MS : 0;
         return (
-          <Card key={i} card={cards[i] ?? null} faceDown={!cards[i]} revealDelayMs={delay} />
+          <Card key={i} card={cards[i] ?? null} faceDown={!cards[i]} revealDelayMs={delay} size="lg" />
         );
       })}
     </div>
