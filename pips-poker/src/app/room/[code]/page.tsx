@@ -17,9 +17,9 @@ import { LedgerPanel } from "@/components/LedgerPanel";
 import { RunItTwicePrompt } from "@/components/RunItTwicePrompt";
 import { ShowMuckPrompt } from "@/components/ShowMuckPrompt";
 import { ChatPanel } from "@/components/ChatPanel";
-import type { BettingAction, ShowDecision, ShowdownResult } from "@/lib/types";
+import type { BettingAction, ShowDecision, ShowdownResult, GameMode, RotationMode } from "@/lib/types";
 
-const BETTING_PHASES = new Set(["flop_betting", "turn_betting", "river_betting"]);
+const BETTING_PHASES = new Set(["preflop_betting", "flop_betting", "turn_betting", "river_betting"]);
 
 export default function RoomPage() {
   const params = useParams<{ code: string }>();
@@ -33,6 +33,12 @@ export default function RoomPage() {
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [smallBlindInput, setSmallBlindInput] = useState("");
+  const [bigBlindInput, setBigBlindInput] = useState("");
+  const [pipsIntervalInput, setPipsIntervalInput] = useState("");
+  const [settingsError, setSettingsError] = useState<string | null>(null);
 
   useEffect(() => {
     getSession().then((s) => {
@@ -228,6 +234,37 @@ export default function RoomPage() {
     }
   }
 
+  async function handleSetGameMode(gameMode: GameMode) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/rooms/set-game-mode`, { roomId, gameMode });
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to set game mode");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUpdateSettings(updates: {
+    smallBlind?: number;
+    bigBlind?: number;
+    rotationMode?: RotationMode;
+    pipsInterval?: number;
+  }) {
+    setSettingsError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/rooms/settings`, { roomId, ...updates });
+      await refresh();
+    } catch (e) {
+      setSettingsError(e instanceof Error ? e.message : "Failed to update settings");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleToggleAway(away: boolean) {
     setActionError(null);
     setBusy(true);
@@ -268,7 +305,7 @@ export default function RoomPage() {
 
   if (!data) return null;
 
-  const { room, players, gameState, handPlayers, myHoleCards, myUserId, chatMessages } = data;
+  const { room, players, gameState, handPlayers, myHoleCards, myUserId, chatMessages, handHistory } = data;
   const myPlayer = players.find((p) => p.user_id === myUserId);
   const amSeated = !!myPlayer;
 
@@ -323,6 +360,26 @@ export default function RoomPage() {
   const iBusted = amSeated && (myPlayer?.chip_stack ?? 0) <= 0;
   const transferTargets = players.filter((p) => p.user_id !== leaderId);
 
+  const currentGameMode: GameMode = gameState?.game_mode ?? "pips";
+  const rotationMode: RotationMode = room.rotation_mode ?? "dealer_choice";
+  const pipsInterval = room.pips_interval ?? 5;
+  const pendingGameMode = gameState?.pending_game_mode ?? null;
+  // Between hands and only relevant when the leader picks the mode each hand;
+  // otherwise the rotation (every_x) determines it automatically and there's
+  // nothing to choose.
+  const showGameModePicker = canStartHand && rotationMode === "dealer_choice";
+  let nextHandLabel: string | null = null;
+  if (canStartHand) {
+    if (rotationMode === "dealer_choice") {
+      nextHandLabel = pendingGameMode === "holdem" ? "Texas Hold'em" : pendingGameMode === "pips" ? "Pips Poker" : null;
+    } else {
+      // every_x: hand_number isn't directly available client-side, so we
+      // can't precisely predict the next hand's mode without it; fall back
+      // to not showing a prediction in that case rather than guessing wrong.
+      nextHandLabel = null;
+    }
+  }
+
   return (
     <main className="flex min-h-screen flex-col bg-felt-dark">
       <header className="flex items-center justify-between border-b border-neon/15 bg-black/60 px-4 py-3 text-white backdrop-blur-sm">
@@ -337,15 +394,43 @@ export default function RoomPage() {
             </div>
             <div>
               <p className="text-white/40">GAME</p>
-              <p className="font-bold text-white">PIPS POKER</p>
+              <p className="font-bold text-white">
+                {currentGameMode === "holdem" ? "TEXAS HOLD'EM" : "PIPS POKER"}
+              </p>
             </div>
             <div>
               <p className="text-white/40">PHASE</p>
               <p className="font-bold uppercase text-white">{gameState?.phase ?? "waiting room"}</p>
             </div>
+            {nextHandLabel && (
+              <div>
+                <p className="text-white/40">NEXT HAND</p>
+                <p className="font-bold text-white">{nextHandLabel}</p>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowSettings((v) => !v)}
+            className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+              showSettings
+                ? "border-neon bg-neon text-felt-dark shadow-neon"
+                : "border-white/15 bg-black/40 text-white hover:border-neon/50"
+            }`}
+          >
+            Settings
+          </button>
+          <button
+            onClick={() => setShowHistory((v) => !v)}
+            className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+              showHistory
+                ? "border-neon bg-neon text-felt-dark shadow-neon"
+                : "border-white/15 bg-black/40 text-white hover:border-neon/50"
+            }`}
+          >
+            History
+          </button>
           <button
             onClick={() => setShowLedger((v) => !v)}
             className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
@@ -413,6 +498,148 @@ export default function RoomPage() {
         </div>
       )}
 
+      {showSettings && (
+        <div className="mx-auto mt-2 flex w-full max-w-md flex-col gap-3 rounded-lg border border-neon/30 bg-black/60 p-3 text-white">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-white/40">Game mode rotation</p>
+            {isLeader ? (
+              <div className="mt-1 flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="rotationMode"
+                    checked={rotationMode === "dealer_choice"}
+                    disabled={busy}
+                    onChange={() => handleUpdateSettings({ rotationMode: "dealer_choice" })}
+                  />
+                  Dealer chooses game each hand
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="rotationMode"
+                    checked={rotationMode === "every_x"}
+                    disabled={busy}
+                    onChange={() => handleUpdateSettings({ rotationMode: "every_x" })}
+                  />
+                  Play Pips every
+                  <input
+                    type="number"
+                    min={2}
+                    step={1}
+                    value={pipsIntervalInput}
+                    onChange={(e) => setPipsIntervalInput(e.target.value)}
+                    onBlur={() => {
+                      if (!pipsIntervalInput.trim()) return;
+                      const parsed = Number(pipsIntervalInput);
+                      if (!Number.isInteger(parsed) || parsed < 2) {
+                        setSettingsError("Enter a valid hand interval.");
+                        return;
+                      }
+                      handleUpdateSettings({ pipsInterval: parsed });
+                    }}
+                    placeholder={String(pipsInterval)}
+                    disabled={busy}
+                    className="w-16 rounded bg-felt-dark px-2 py-1 text-xs text-white outline-none ring-1 ring-white/20 focus:ring-neon disabled:opacity-40"
+                  />
+                  hands
+                </label>
+                {settingsError && <p className="text-xs text-chip-red">{settingsError}</p>}
+              </div>
+            ) : (
+              <p className="mt-1 text-sm text-white/70">
+                {rotationMode === "dealer_choice"
+                  ? "Dealer chooses game each hand"
+                  : `Pips every ${pipsInterval} hands`}
+              </p>
+            )}
+          </div>
+
+          {showGameModePicker && (
+            <div>
+              <p className="text-xs uppercase tracking-wide text-white/40">Next hand's game</p>
+              {isLeader ? (
+                <div className="mt-1 flex gap-2">
+                  <button
+                    onClick={() => handleSetGameMode("pips")}
+                    disabled={busy}
+                    className={`rounded-full border px-3 py-2 text-xs font-semibold transition disabled:opacity-40 ${
+                      pendingGameMode === "pips"
+                        ? "border-neon bg-neon text-felt-dark shadow-neon"
+                        : "border-white/15 bg-black/40 text-white hover:border-neon/50"
+                    }`}
+                  >
+                    Pips Poker
+                  </button>
+                  <button
+                    onClick={() => handleSetGameMode("holdem")}
+                    disabled={busy}
+                    className={`rounded-full border px-3 py-2 text-xs font-semibold transition disabled:opacity-40 ${
+                      pendingGameMode === "holdem"
+                        ? "border-neon bg-neon text-felt-dark shadow-neon"
+                        : "border-white/15 bg-black/40 text-white hover:border-neon/50"
+                    }`}
+                  >
+                    Texas Hold'em
+                  </button>
+                </div>
+              ) : (
+                <p className="mt-1 text-sm text-white/70">
+                  {pendingGameMode === "holdem" ? "Texas Hold'em" : pendingGameMode === "pips" ? "Pips Poker" : "Not chosen yet"}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <p className="text-xs uppercase tracking-wide text-white/40">Blinds (Hold'em)</p>
+            {isLeader && canStartHand ? (
+              <div className="mt-1 flex items-center gap-2 text-sm">
+                <span className="text-white/60">SB</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={smallBlindInput}
+                  onChange={(e) => setSmallBlindInput(e.target.value)}
+                  onBlur={() => {
+                    if (!smallBlindInput.trim()) return;
+                    const parsed = Number(smallBlindInput);
+                    if (Number.isFinite(parsed) && parsed > 0) handleUpdateSettings({ smallBlind: parsed });
+                  }}
+                  placeholder={String(room.small_blind ?? 1)}
+                  disabled={busy}
+                  className="w-16 rounded bg-felt-dark px-2 py-1 text-xs text-white outline-none ring-1 ring-white/20 focus:ring-neon disabled:opacity-40"
+                />
+                <span className="text-white/60">BB</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={bigBlindInput}
+                  onChange={(e) => setBigBlindInput(e.target.value)}
+                  onBlur={() => {
+                    if (!bigBlindInput.trim()) return;
+                    const parsed = Number(bigBlindInput);
+                    if (Number.isFinite(parsed) && parsed > 0) handleUpdateSettings({ bigBlind: parsed });
+                  }}
+                  placeholder={String(room.big_blind ?? 2)}
+                  disabled={busy}
+                  className="w-16 rounded bg-felt-dark px-2 py-1 text-xs text-white outline-none ring-1 ring-white/20 focus:ring-neon disabled:opacity-40"
+                />
+              </div>
+            ) : (
+              <p className="mt-1 text-sm text-white/70">
+                {room.small_blind ?? 1} / {room.big_blind ?? 2}
+              </p>
+            )}
+            {!canStartHand && isLeader && (
+              <p className="mt-1 text-xs text-white/40">Settings lock while a hand is in progress.</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {actionError && (
         <p className="mx-auto mt-2 rounded bg-chip-red/20 px-4 py-1 text-sm text-chip-red">{actionError}</p>
       )}
@@ -430,6 +657,46 @@ export default function RoomPage() {
           canEdit={isLeader}
           onAdjust={handleLedgerAdjust}
         />
+      )}
+
+      {showHistory && (
+        <div className="mx-auto mt-2 flex w-full max-w-md flex-col gap-2 rounded-lg border border-neon/30 bg-black/60 p-3 text-white">
+          {handHistory.length === 0 ? (
+            <p className="text-center text-xs text-white/50">No completed hands yet.</p>
+          ) : (
+            handHistory.map((h) => (
+              <div key={h.handId} className="rounded border border-white/10 bg-felt-dark/60 p-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold">
+                    Hand #{h.handNumber} - {h.gameMode === "holdem" ? "Texas Hold'em" : "Pips Poker"}
+                  </span>
+                  <span className="text-white/40">{h.dealerSeat != null ? `Dealer seat ${h.dealerSeat}` : ""}</span>
+                </div>
+                <p className="mt-1 text-white/60">
+                  {h.gameMode === "holdem"
+                    ? `Blinds ${room.small_blind ?? 1}/${room.big_blind ?? 2}`
+                    : `Ante ${room.ante_amount ?? 0}`}
+                  {" - Pot "}
+                  {h.pot}
+                </p>
+                <p className="mt-1">
+                  Winner(s): {h.winners.length > 0 ? h.winners.map((w) => `${w.displayName} (+${w.amountWon})`).join(", ") : "-"}
+                </p>
+                {h.gameMode === "pips" && h.pipWinner && (
+                  <p className="text-white/60">
+                    Highest pips: {h.pipWinner.displayName} ({h.pipWinner.pipTotal})
+                  </p>
+                )}
+                {h.gameMode === "pips" && h.cardsSwappedCount != null && (
+                  <p className="text-white/60">Cards swapped: {h.cardsSwappedCount}</p>
+                )}
+                <p className="mt-1 text-white/40">
+                  {h.players.map((p) => `${p.displayName} ${p.netChange >= 0 ? "+" : ""}${p.netChange}`).join("  ")}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
       )}
 
       {iBusted && (

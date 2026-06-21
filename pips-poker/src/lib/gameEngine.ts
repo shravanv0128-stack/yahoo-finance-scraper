@@ -13,13 +13,14 @@ import { freshShuffledDeck, drawCards, drawReplacements } from "./deck";
 import {
   Card,
   GamePhase,
+  GameMode,
   BettingAction,
   ShowdownPlayerResult,
   ShowDecision,
   ShowdownResult,
   ShowdownBoardResult,
 } from "./types";
-import { nextPhase } from "./gamePhases";
+import { nextPhase, nextHoldemPhase, ALL_BETTING_PHASES } from "./gamePhases";
 import {
   BettingPlayerState,
   BettingRoundState,
@@ -29,6 +30,7 @@ import {
   buildSidePots,
 } from "./bettingEngine";
 import { evaluateBestHand, findHandWinners, handCategoryLabel } from "./handEvaluator";
+import { evaluateBestHandHoldem } from "./holdemEvaluator";
 import { computePipTotal, findPipWinners } from "./pipEvaluator";
 
 const DEFAULT_ACT_TIMEOUT_SECONDS = 60;
@@ -65,13 +67,15 @@ interface HandPlayerRow {
 export async function startNewHand(supabase: SupabaseClient, roomId: string) {
   const { data: room, error: roomError } = await supabase
     .from("rooms")
-    .select("ante_amount, small_bet, act_timeout_seconds")
+    .select("ante_amount, small_bet, act_timeout_seconds, small_blind, big_blind, rotation_mode, pips_interval")
     .eq("id", roomId)
     .single();
   if (roomError) throw roomError;
   const anteAmount = room.ante_amount ?? 0.5;
   const minBet = room.small_bet ?? 1;
   const actTimeout = room.act_timeout_seconds ?? DEFAULT_ACT_TIMEOUT_SECONDS;
+  const smallBlind = room.small_blind ?? 5;
+  const bigBlind = room.big_blind ?? 10;
 
   const { data: players, error: playersError } = await supabase
     .from("players")
@@ -96,12 +100,53 @@ export async function startNewHand(supabase: SupabaseClient, roomId: string) {
 
   const handNumber = (existingHands?.[0]?.hand_number ?? 0) + 1;
 
+  // Dealer rotation: advance clockwise from the PREVIOUS hand's dealer_seat
+  // to the next currently-active seated player, rather than always resetting
+  // to players[0].seat. If there's no previous hand, start at players[0].
+  const { data: prevGameState } = await supabase
+    .from("game_state")
+    .select("dealer_seat")
+    .eq("room_id", roomId)
+    .maybeSingle();
+
+  const seatedSeats = players.map((p: { seat: number }) => p.seat).sort((a: number, b: number) => a - b);
+  let dealerSeat: number = players[0].seat;
+  if (prevGameState && typeof prevGameState.dealer_seat === "number" && existingHands && existingHands.length > 0) {
+    const prevDealer = prevGameState.dealer_seat as number;
+    // Find the next seated seat strictly greater than prevDealer (wrapping).
+    const next = seatedSeats.find((s: number) => s > prevDealer);
+    dealerSeat = next !== undefined ? next : seatedSeats[0];
+  }
+
+  // Resolve which game mode this hand will be played as.
+  let gameMode: GameMode;
+  if (room.rotation_mode === "every_x") {
+    const rawInterval = room.pips_interval;
+    const pipsInterval = Number.isInteger(rawInterval) && rawInterval >= 2 ? rawInterval : 5;
+    gameMode = handNumber % pipsInterval === 0 ? "pips" : "holdem";
+  } else {
+    // dealer_choice: require game_state.pending_game_mode to already be set.
+    const { data: gs } = await supabase
+      .from("game_state")
+      .select("pending_game_mode")
+      .eq("room_id", roomId)
+      .maybeSingle();
+    if (!gs?.pending_game_mode) {
+      throw new Error("Select a game mode first");
+    }
+    gameMode = gs.pending_game_mode as GameMode;
+  }
+
   const { data: hand, error: handError } = await supabase
     .from("hands")
-    .insert({ room_id: roomId, hand_number: handNumber, phase: "ante" })
+    .insert({ room_id: roomId, hand_number: handNumber, phase: "ante", game_mode: gameMode, dealer_seat: dealerSeat })
     .select()
     .single();
   if (handError) throw handError;
+
+  if (gameMode === "holdem") {
+    return startHoldemHand(supabase, roomId, hand, players, dealerSeat, smallBlind, bigBlind, actTimeout);
+  }
 
   let deck = freshShuffledDeck();
 
@@ -168,19 +213,143 @@ export async function startNewHand(supabase: SupabaseClient, roomId: string) {
       pot,
       current_bet: 0,
       min_raise: minBet,
-      dealer_seat: players[0].seat,
+      dealer_seat: dealerSeat,
       active_seat: firstToAct.seat,
       act_deadline: newActDeadline(actTimeout),
       awaiting_run_it_twice: false,
       run_it_twice_votes: {},
       community_cards_2: null,
       showdown_result: null,
+      game_mode: "pips" as GameMode,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "room_id" }
   );
 
   return { hand, handPlayers, communityCards: flopCards, pot };
+}
+
+/**
+ * Hold'em-specific hand setup: no ante/bomb pot. Posts blinds (small blind =
+ * seat clockwise-next from the dealer, big blind = next seat after that),
+ * handling short-stack all-in-for-less posting the same way the Pips ante
+ * loop does (Math.min against the player's stack). Heads-up (exactly 2
+ * active players) is special-cased per standard rules: the dealer posts SB
+ * and acts first preflop; the other player posts BB and acts first postflop.
+ * Deals 2 hole cards per player and sets phase to preflop_betting.
+ */
+async function startHoldemHand(
+  supabase: SupabaseClient,
+  roomId: string,
+  hand: { id: string },
+  players: { id: string; user_id: string; seat: number; display_name: string; chip_stack: number }[],
+  dealerSeat: number,
+  smallBlind: number,
+  bigBlind: number,
+  actTimeout: number
+) {
+  const seatOrder = players.slice().sort((a, b) => a.seat - b.seat).map((p) => p.seat);
+  const seatToPlayer = new Map(players.map((p) => [p.seat, p]));
+
+  function nextSeatAfter(seat: number): number {
+    const idx = seatOrder.indexOf(seat);
+    return seatOrder[(idx + 1) % seatOrder.length];
+  }
+
+  const isHeadsUp = players.length === 2;
+
+  let sbSeat: number;
+  let bbSeat: number;
+  if (isHeadsUp) {
+    // Heads-up: dealer posts SB, the other player posts BB.
+    sbSeat = dealerSeat;
+    bbSeat = nextSeatAfter(dealerSeat);
+  } else {
+    sbSeat = nextSeatAfter(dealerSeat);
+    bbSeat = nextSeatAfter(sbSeat);
+  }
+
+  let deck = freshShuffledDeck();
+  let pot = 0;
+  const handPlayers: HandPlayerRow[] = [];
+
+  for (const seat of seatOrder) {
+    const player = seatToPlayer.get(seat)!;
+    let blindAmount = 0;
+    if (seat === sbSeat) blindAmount = Math.min(smallBlind, player.chip_stack);
+    else if (seat === bbSeat) blindAmount = Math.min(bigBlind, player.chip_stack);
+    pot += blindAmount;
+
+    const newStack = player.chip_stack - blindAmount;
+    const { data: hp, error: hpError } = await supabase
+      .from("hand_players")
+      .insert({
+        hand_id: hand.id,
+        player_id: player.id,
+        user_id: player.user_id,
+        seat: player.seat,
+        display_name: player.display_name,
+        status: newStack === 0 && blindAmount > 0 ? "all_in" : "active",
+        chip_stack: newStack,
+        current_bet: blindAmount,
+        total_committed: blindAmount,
+        has_acted_this_round: false,
+        has_swapped: false,
+        revealed_cards: null,
+        revealed_pip_total: null,
+      })
+      .select()
+      .single();
+    if (hpError) throw hpError;
+    handPlayers.push(hp as HandPlayerRow);
+
+    await supabase.from("players").update({ chip_stack: newStack }).eq("id", player.id);
+  }
+
+  // Deal 2 private hole cards to each player.
+  for (const hp of handPlayers) {
+    const { drawn, remaining } = drawCards(deck, 2);
+    deck = remaining;
+    const { error: holeError } = await supabase.from("hole_cards").insert({
+      hand_id: hand.id,
+      hand_player_id: hp.id,
+      user_id: hp.user_id,
+      cards: drawn,
+    });
+    if (holeError) throw holeError;
+  }
+
+  // First to act preflop: first active seat clockwise after the BB (heads-up:
+  // the dealer/SB acts first preflop, per the special case above).
+  const firstToActSeat = isHeadsUp ? sbSeat : nextSeatAfter(bbSeat);
+  const currentBet = Math.max(...handPlayers.map((hp) => hp.current_bet));
+
+  await supabase.from("hands").update({ phase: "preflop_betting", pot }).eq("id", hand.id);
+
+  await supabase.from("game_state").upsert(
+    {
+      room_id: roomId,
+      hand_id: hand.id,
+      phase: "preflop_betting" as GamePhase,
+      community_cards: [],
+      deck,
+      pot,
+      current_bet: currentBet,
+      min_raise: bigBlind,
+      dealer_seat: dealerSeat,
+      active_seat: firstToActSeat,
+      act_deadline: newActDeadline(actTimeout),
+      awaiting_run_it_twice: false,
+      run_it_twice_votes: {},
+      community_cards_2: null,
+      showdown_result: null,
+      game_mode: "holdem" as GameMode,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "room_id" }
+  );
+
+  return { hand, handPlayers, communityCards: [], pot };
 }
 
 /** Build a BettingRoundState snapshot from the DB rows for a hand. */
@@ -220,9 +389,10 @@ export async function applyBettingAction(
     .eq("room_id", roomId)
     .single();
   if (gsError) throw gsError;
-  if (!["flop_betting", "turn_betting", "river_betting"].includes(gameState.phase)) {
+  if (!ALL_BETTING_PHASES.includes(gameState.phase)) {
     throw new Error(`Cannot take a betting action during phase ${gameState.phase}`);
   }
+  const gameMode: GameMode = (gameState.game_mode as GameMode) ?? "pips";
 
   const { data: room, error: roomError } = await supabase
     .from("rooms")
@@ -303,6 +473,39 @@ export async function applyBettingAction(
       // paid out automatically; players can optionally reveal their cards
       // afterwards for show, but that never blocks or changes the payout).
       newPhase = "showdown";
+    } else if (gameMode === "holdem") {
+      // Hold'em phase-advance branch, kept entirely separate from the Pips
+      // branch below so Pips behavior is byte-for-byte unaffected. Mirrors
+      // the same structure (burn 1 -> deal N -> next betting phase) but
+      // never routes into draw_swap.
+      if (gameState.phase === "preflop_betting") {
+        const { remaining: afterBurn } = drawCards(newDeck, 1); // burn
+        const { drawn, remaining } = drawCards(afterBurn, 3); // flop
+        newCommunityCards = [...newCommunityCards, ...drawn];
+        newDeck = remaining;
+        newPhase = "flop_betting";
+      } else if (gameState.phase === "flop_betting") {
+        const { remaining: afterBurn } = drawCards(newDeck, 1); // burn
+        const { drawn, remaining } = drawCards(afterBurn, 1); // turn
+        newCommunityCards = [...newCommunityCards, ...drawn];
+        newDeck = remaining;
+        newPhase = "turn_betting";
+      } else if (gameState.phase === "turn_betting") {
+        const { remaining: afterBurn } = drawCards(newDeck, 1); // burn
+        const { drawn, remaining } = drawCards(afterBurn, 1); // river
+        newCommunityCards = [...newCommunityCards, ...drawn];
+        newDeck = remaining;
+        newPhase = "river_betting";
+      } else if (gameState.phase === "river_betting") {
+        newPhase = "showdown";
+      }
+      const resetPlayers = resetForNewRound(result.state.players);
+      for (const p of resetPlayers) {
+        await supabase
+          .from("hand_players")
+          .update({ current_bet: 0, has_acted_this_round: p.has_acted_this_round })
+          .eq("id", p.hand_player_id);
+      }
     } else {
       newPhase = nextPhase(gameState.phase); // e.g. flop_betting -> draw_swap
       if (newPhase === "turn") {
@@ -392,7 +595,7 @@ export async function enforceActTimeout(supabase: SupabaseClient, roomId: string
     .maybeSingle();
   if (gsError) throw gsError;
   if (!gameState || !gameState.hand_id) return;
-  if (!["flop_betting", "turn_betting", "river_betting"].includes(gameState.phase)) return;
+  if (!ALL_BETTING_PHASES.includes(gameState.phase)) return;
   if (gameState.active_seat === null || !gameState.act_deadline) return;
   if (new Date(gameState.act_deadline).getTime() > Date.now()) return;
 
@@ -663,6 +866,9 @@ export async function runShowdown(
     .single();
   if (gsError) throw gsError;
 
+  const gameMode: GameMode = (gameState.game_mode as GameMode) ?? "pips";
+  const isHoldem = gameMode === "holdem";
+
   const { data: handPlayers, error: hpError } = await supabase
     .from("hand_players")
     .select("*")
@@ -691,7 +897,7 @@ export async function runShowdown(
     seat: number;
     display_name: string;
     bestHand: ReturnType<typeof evaluateBestHand>;
-    pipResult: ReturnType<typeof computePipTotal>;
+    pipResult: ReturnType<typeof computePipTotal> | null;
     holeCards: Card[];
   }[] = [];
 
@@ -705,8 +911,13 @@ export async function runShowdown(
     const holeCards: Card[] = holeRow.cards;
 
     const bestHand =
-      contenders.length === 1 ? null : evaluateBestHand(holeCards, resolvedBoards[0]);
-    const pipResult = computePipTotal(holeCards);
+      contenders.length === 1
+        ? null
+        : isHoldem
+          ? evaluateBestHandHoldem(holeCards, resolvedBoards[0])
+          : evaluateBestHand(holeCards, resolvedBoards[0]);
+    // Pip totals are a Pips-only concept; never computed for Hold'em hands.
+    const pipResult = isHoldem ? null : computePipTotal(holeCards);
 
     entries.push({
       hand_player_id: cp.id,
@@ -738,6 +949,47 @@ export async function runShowdown(
       ],
       pipWinners: [],
     });
+  } else if (isHoldem) {
+    // Hold'em: each side pot is split evenly across the run-out boards (1 or
+    // 2 for "run it twice"), and the FULL amount of each board's share goes
+    // to the best poker-hand winners only - no 50/50 pip split. pipWinners
+    // stays empty for every board so ShowdownSummary can hide that column.
+    resolvedBoards.forEach((board, boardIdx) => {
+      const pokerAgg = new Map<string, { amount: number; handLabel: string }>();
+
+      for (const sidePot of sidePots) {
+        const eligibleHandPlayerIds = sidePot.eligibleHandPlayerIds;
+        const perBoardAmount = sidePot.amount / resolvedBoards.length;
+
+        const eligibleEntries = entries
+          .filter((e) => eligibleHandPlayerIds.includes(e.hand_player_id))
+          .map((e) => ({ ...e, bestHand: evaluateBestHandHoldem(e.holeCards, board) }));
+        if (eligibleEntries.length === 0) continue;
+
+        const pokerWinners = findHandWinners(eligibleEntries);
+        distributeShare(perBoardAmount, pokerWinners, winnings);
+
+        const pokerEach = perBoardAmount / pokerWinners.length;
+        for (const w of pokerWinners) {
+          const prev = pokerAgg.get(w.display_name);
+          pokerAgg.set(w.display_name, {
+            amount: (prev?.amount ?? 0) + pokerEach,
+            handLabel: handCategoryLabel(w.bestHand),
+          });
+        }
+      }
+
+      boardResults.push({
+        label: ranItTwice ? `Board ${boardIdx + 1}` : "",
+        communityCards: board,
+        pokerWinners: Array.from(pokerAgg.entries()).map(([displayName, v]) => ({
+          displayName,
+          amount: Math.round(v.amount * 100) / 100,
+          handLabel: v.handLabel,
+        })),
+        pipWinners: [],
+      });
+    });
   } else {
     // Each side pot is split evenly across the run-out boards (1 or 2 for
     // "run it twice"), and within each board's share, split 50/50 between
@@ -763,7 +1015,7 @@ export async function runShowdown(
         const pipHalf = perBoardAmount - pokerHalf; // ensures halves sum exactly to perBoardAmount
 
         const pokerWinners = findHandWinners(eligibleEntries);
-        const pipWinners = findPipWinners(eligibleEntries);
+        const pipWinners = findPipWinners(eligibleEntries as (typeof eligibleEntries[number] & { pipResult: ReturnType<typeof computePipTotal> })[]);
         distributeShare(pokerHalf, pokerWinners, winnings);
         distributeShare(pipHalf, pipWinners, winnings);
 
@@ -806,6 +1058,7 @@ export async function runShowdown(
     ranItTwice,
     uncontested: contenders.length === 1,
     boards: boardResults,
+    gameMode,
   };
 
   const showdownResults: ShowdownPlayerResult[] = entries.map((e) => ({
@@ -835,7 +1088,7 @@ export async function runShowdown(
       .from("hand_players")
       .update({
         revealed_cards: reveal ? e.holeCards : null,
-        revealed_pip_total: reveal ? e.pipResult.total : null,
+        revealed_pip_total: reveal && e.pipResult ? e.pipResult.total : null,
         mucked: !reveal,
         chip_stack: newStack,
         amount_won: win,
@@ -924,13 +1177,14 @@ export async function applyShowDecision(
 ) {
   const { data: gameState, error: gsError } = await supabase
     .from("game_state")
-    .select("phase")
+    .select("phase, game_mode")
     .eq("room_id", roomId)
     .single();
   if (gsError) throw gsError;
   if (gameState.phase !== "hand_complete") {
     throw new Error("Cards can only be shown or mucked once the hand is complete");
   }
+  const isHoldem = ((gameState.game_mode as GameMode) ?? "pips") === "holdem";
 
   const { data: handPlayer, error: hpError } = await supabase
     .from("hand_players")
@@ -958,7 +1212,7 @@ export async function applyShowDecision(
         has_decided_show: true,
         mucked: false,
         revealed_cards: holeCards,
-        revealed_pip_total: computePipTotal(holeCards).total,
+        revealed_pip_total: isHoldem ? null : computePipTotal(holeCards).total,
       })
       .eq("id", handPlayerId);
   } else {

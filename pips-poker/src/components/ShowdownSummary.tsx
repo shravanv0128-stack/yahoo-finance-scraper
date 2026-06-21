@@ -78,6 +78,9 @@ export function ShowdownSummary({
 }) {
   const shown = players.filter((p) => !p.folded && p.revealedCards);
   const boards = result?.boards ?? [];
+  // Hide the "Highest pips" column entirely for Hold'em hands - pips are a
+  // Pips-only concept and pipWinners is always empty for holdem boards.
+  const showPips = (result?.gameMode ?? "pips") !== "holdem";
   // The shared-flop split only makes sense once there are two boards to
   // compare (a run-it-twice hand); for a normal single-board hand every
   // community card animates the same way, just treated as "board 0's
@@ -188,7 +191,7 @@ export function ShowdownSummary({
                 {b.pokerWinners[0]?.displayName} wins (everyone else folded)
               </p>
             ) : (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className={`grid grid-cols-1 gap-2 ${showPips ? "sm:grid-cols-2" : ""}`}>
                 <div className="rounded bg-black/30 px-3 py-2">
                   <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-300">
                     🂡 Best poker hand
@@ -200,17 +203,19 @@ export function ShowdownSummary({
                     </p>
                   ))}
                 </div>
-                <div className="rounded bg-black/30 px-3 py-2">
-                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-chip-blue">
-                    ◆ Highest pips
-                  </p>
-                  {groupWinners(b.pipWinners, (w) => `${w.pipTotal} pips`).map((g, j) => (
-                    <p key={j} className="text-sm text-white">
-                      <span className="font-semibold">{joinNames(g.displayNames)}</span>
-                      <span className="text-white/50"> — {g.key}</span>
+                {showPips && b.pipWinners.length > 0 && (
+                  <div className="rounded bg-black/30 px-3 py-2">
+                    <p className="mb-1 text-xs font-bold uppercase tracking-wide text-chip-blue">
+                      ◆ Highest pips
                     </p>
-                  ))}
-                </div>
+                    {groupWinners(b.pipWinners, (w) => `${w.pipTotal} pips`).map((g, j) => (
+                      <p key={j} className="text-sm text-white">
+                        <span className="font-semibold">{joinNames(g.displayNames)}</span>
+                        <span className="text-white/50"> — {g.key}</span>
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

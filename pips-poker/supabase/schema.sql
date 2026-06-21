@@ -37,6 +37,14 @@ create table if not exists rooms (
   max_players integer not null default 8,
   act_timeout_seconds integer not null default 60,
   allow_run_it_twice boolean not null default true,
+  -- Texas Hold'em blinds (used only when a hand's game_mode is 'holdem').
+  small_blind numeric(10,2) not null default 5,
+  big_blind numeric(10,2) not null default 10,
+  -- Game-mode rotation: 'dealer_choice' lets the dealer pick pips/holdem
+  -- before each hand (see game_state.pending_game_mode); 'every_x' plays
+  -- Pips every `pips_interval`th hand and Hold'em otherwise.
+  rotation_mode text not null default 'dealer_choice' check (rotation_mode in ('dealer_choice','every_x')),
+  pips_interval integer not null default 5,
   created_at timestamptz not null default now()
 );
 
@@ -66,6 +74,12 @@ create table if not exists hands (
   hand_number integer not null,
   phase text not null default 'waiting_room',
   pot numeric(10,2) not null default 0,
+  -- Which variant this hand was played as. Resolved once at startNewHand()
+  -- time per rooms.rotation_mode; see src/lib/gameEngine.ts.
+  game_mode text not null default 'pips' check (game_mode in ('pips','holdem')),
+  -- The seat holding the dealer button for this hand (rotates clockwise
+  -- each hand - see startNewHand()'s dealer-rotation logic).
+  dealer_seat integer,
   created_at timestamptz not null default now(),
   completed_at timestamptz,
   unique (room_id, hand_number)
@@ -132,6 +146,13 @@ create table if not exists game_state (
   last_aggressor_seat integer,
   awaiting_show_decision boolean not null default false,
   showdown_result jsonb,
+  -- Resolved game mode for the in-progress hand (mirrors hands.game_mode).
+  game_mode text not null default 'pips' check (game_mode in ('pips','holdem')),
+  -- Dealer's chosen mode for the *next* hand when rooms.rotation_mode is
+  -- 'dealer_choice'. Sticky once set (not cleared after consumption) so the
+  -- dealer can change their mind before the next hand and non-dealers can
+  -- see the current pending choice read-only. Null until a dealer picks.
+  pending_game_mode text check (pending_game_mode in ('pips','holdem')),
   updated_at timestamptz not null default now()
 );
 -- Run this once against an existing database to add show/muck tracking:
@@ -258,3 +279,13 @@ alter table game_state add column if not exists community_cards_2 jsonb;
 -- create policy "users send their own chat messages" on chat_messages for insert with check (auth.uid() = user_id);
 -- create index if not exists chat_messages_room_id_idx on chat_messages (room_id);
 -- alter publication supabase_realtime add table chat_messages;
+-- Run this once to add Texas Hold'em as a second game mode alongside Pips,
+-- plus the room settings (blinds, rotation) that drive it:
+-- alter table rooms add column if not exists small_blind numeric(10,2) not null default 5;
+-- alter table rooms add column if not exists big_blind numeric(10,2) not null default 10;
+-- alter table rooms add column if not exists rotation_mode text not null default 'dealer_choice' check (rotation_mode in ('dealer_choice','every_x'));
+-- alter table rooms add column if not exists pips_interval integer not null default 5;
+-- alter table hands add column if not exists game_mode text not null default 'pips' check (game_mode in ('pips','holdem'));
+-- alter table hands add column if not exists dealer_seat integer;
+-- alter table game_state add column if not exists game_mode text not null default 'pips' check (game_mode in ('pips','holdem'));
+-- alter table game_state add column if not exists pending_game_mode text check (pending_game_mode in ('pips','holdem'));
