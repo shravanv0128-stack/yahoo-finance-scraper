@@ -35,7 +35,6 @@ export interface TableProps {
   mySeat: number | null;
   actDeadline?: string | null;
   actTimeoutSeconds?: number;
-  viewMode?: "classic" | "immersive";
 }
 
 // Returns evenly spaced [x%, y%] positions around an ellipse, starting from
@@ -56,23 +55,6 @@ function ellipsePosition(index: number, total: number): { left: string; top: str
   return { left: `${x}%`, top: `${y}%` };
 }
 
-// Immersive mode's seats: index 0 (the viewer) sits large in the
-// foreground at the bottom; everyone else is spread along a flattened arc
-// bowing over the top of the felt, like looking across a table from a
-// seated, first-person angle rather than down on it from above.
-function ellipsePositionImmersive(index: number, total: number): { left: string; top: string } {
-  if (index === 0) return { left: "50%", top: "88%" };
-  const others = total - 1;
-  const t = others <= 1 ? 0.5 : (index - 1) / (others - 1);
-  const angleDeg = 200 + t * 140; // sweeps from lower-left, over the top, to lower-right
-  const angle = (angleDeg * Math.PI) / 180;
-  const rx = 42;
-  const ry = 26;
-  const x = 50 + rx * Math.cos(angle);
-  const y = 50 + ry * Math.sin(angle);
-  return { left: `${x}%`, top: `${y}%` };
-}
-
 export function Table({
   seats,
   dealerSeat,
@@ -83,7 +65,6 @@ export function Table({
   mySeat,
   actDeadline = null,
   actTimeoutSeconds = 60,
-  viewMode = "classic",
 }: TableProps) {
   // Rotate the seat order so the viewer's own seat is always index 0
   // (bottom-center), matching PokerNow's "you are always at the bottom".
@@ -95,66 +76,6 @@ export function Table({
           if (myIdx === -1) return seats;
           return [...seats.slice(myIdx), ...seats.slice(0, myIdx)];
         })();
-
-  if (viewMode === "immersive") {
-    return (
-      <div className="relative mx-auto aspect-[16/10] w-full max-w-5xl [perspective:1400px]">
-        {/* Dark futuristic room: black void with a moody neon-green ambient
-            glow rising off the table, instead of a flat felt backdrop. */}
-        <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-black via-felt-dark/80 to-black" />
-        <div className="absolute inset-x-[8%] top-[8%] h-1/2 rounded-full bg-neon/10 blur-3xl" />
-
-        {/* The animate-tablesway wrapper is the "breathing" first-person
-            camera: a slow, tiny tilt/drift so the scene never reads as a
-            static screenshot, applied to the whole tabletop only (not the
-            background void) so it feels like camera sway, not the room
-            shaking. */}
-        <div className="absolute inset-0 origin-bottom animate-tablesway">
-          {/* Foreshortened tabletop: a wide, flattened oval anchored to the
-              bottom edge of the frame, as if the viewer's own seat is just
-              off-screen at the bottom looking across the felt. */}
-          <div className="absolute inset-x-[4%] bottom-[2%] top-[22%] rounded-[50%] bg-felt shadow-table" />
-          <div className="absolute inset-x-[4%] bottom-[2%] top-[22%] rounded-[50%] ring-1 ring-neon/70 shadow-[0_0_24px_6px_rgba(57,255,140,0.5)]" />
-
-          {/* Community cards + pot sit in the middle distance, across the
-              table from the viewer. */}
-          <div className="absolute left-1/2 top-[42%] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
-            <PotDisplay pot={pot} currentBet={currentBet} pots={pots} />
-            <CommunityBoard cards={communityCards} />
-          </div>
-
-          {orderedSeats.map((s, i) => {
-            const pos = ellipsePositionImmersive(i, orderedSeats.length);
-            return (
-              <div
-                key={s.seat}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 ${i === 0 ? "z-10 scale-125" : "scale-90"}`}
-                style={{ left: pos.left, top: pos.top }}
-              >
-                <PlayerSeat
-                  seat={s.seat}
-                  displayName={s.displayName}
-                  chipStack={s.chipStack}
-                  currentBet={s.currentBet}
-                  status={s.status}
-                  isActingSeat={s.isActingSeat}
-                  isMe={s.isMe}
-                  isDealer={s.seat === dealerSeat}
-                  holeCards={s.holeCards}
-                  revealedCards={s.revealedCards}
-                  revealedPipTotal={s.revealedPipTotal}
-                  swappedCount={s.swappedCount}
-                  communityCards={communityCards}
-                  actDeadline={s.isActingSeat ? actDeadline : null}
-                  actTimeoutSeconds={actTimeoutSeconds}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="relative mx-auto aspect-[16/10] w-full max-w-4xl">

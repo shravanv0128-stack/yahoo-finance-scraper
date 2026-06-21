@@ -34,14 +34,9 @@ const config: Config = {
           "0%": { opacity: "0", transform: "translateY(4px) scale(0.98)" },
           "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
         },
-        tablesway: {
-          "0%, 100%": { transform: "rotateX(10deg) rotateZ(-0.3deg) translateY(0px)" },
-          "50%": { transform: "rotateX(10deg) rotateZ(0.3deg) translateY(-3px)" },
-        },
       },
       animation: {
         fadein: "fadein 0.35s ease-out",
-        tablesway: "tablesway 7s ease-in-out infinite",
       },
     },
   },

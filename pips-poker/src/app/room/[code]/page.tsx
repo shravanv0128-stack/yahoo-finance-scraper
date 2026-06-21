@@ -33,19 +33,6 @@ export default function RoomPage() {
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
-  const [showViewMenu, setShowViewMenu] = useState(false);
-  const [tableViewMode, setTableViewMode] = useState<"classic" | "immersive">("classic");
-
-  // Table View Mode is a purely visual, per-browser preference (it doesn't
-  // touch game state), so it's persisted client-side rather than in the
-  // room/player rows.
-  useEffect(() => {
-    const stored = localStorage.getItem("pips:tableViewMode");
-    if (stored === "classic" || stored === "immersive") setTableViewMode(stored);
-  }, []);
-  useEffect(() => {
-    localStorage.setItem("pips:tableViewMode", tableViewMode);
-  }, [tableViewMode]);
 
   useEffect(() => {
     getSession().then((s) => {
@@ -359,42 +346,6 @@ export default function RoomPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <button
-              onClick={() => setShowViewMenu((v) => !v)}
-              aria-label="Table view settings"
-              className={`flex items-center justify-center rounded-full border p-2 transition ${
-                showViewMenu
-                  ? "border-neon bg-neon text-felt-dark shadow-neon"
-                  : "border-white/15 bg-black/40 text-white hover:border-neon/50"
-              }`}
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.96 1.7 1.7 0 0 0 4.26 7.1l-.06-.06A2 2 0 1 1 7.03 4.2l.06.06A1.7 1.7 0 0 0 8.96 4.6a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.04 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 8.96a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z" />
-              </svg>
-            </button>
-            {showViewMenu && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-56 rounded-lg border border-white/15 bg-black/95 p-3 shadow-lg backdrop-blur-sm">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-white/50">Table view mode</p>
-                {(["classic", "immersive"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => {
-                      setTableViewMode(mode);
-                      setShowViewMenu(false);
-                    }}
-                    className={`mb-1 flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs font-semibold last:mb-0 ${
-                      tableViewMode === mode ? "bg-neon text-felt-dark" : "text-white hover:bg-white/10"
-                    }`}
-                  >
-                    {mode === "classic" ? "Classic table" : "Immersive live table"}
-                    {tableViewMode === mode && <span>✓</span>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
           <button
             onClick={() => setShowLedger((v) => !v)}
             className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
@@ -554,7 +505,6 @@ export default function RoomPage() {
           mySeat={myPlayer?.seat ?? null}
           actDeadline={gameState?.act_deadline ?? null}
           actTimeoutSeconds={room.act_timeout_seconds ?? 60}
-          viewMode={tableViewMode}
         />
 
         {/* Showdown summary as an overlay on top of the table, never pushing
