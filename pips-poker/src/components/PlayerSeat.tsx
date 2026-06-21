@@ -78,27 +78,44 @@ export function PlayerSeat({
         </div>
       )}
 
-      <div className="relative flex gap-1.5">
-        {(cardsToShow ?? (holeCards ? [null, null, null] : [])).map((_, i) => (
-          <Card
-            key={i}
-            card={cardsToShow?.[i] ?? undefined}
-            faceDown={!showFaceUp || !cardsToShow?.[i]}
-            size={isWinner || isActingSeat ? "lg" : "md"}
-            highlight={isActingSeat || isWinner}
-          />
-        ))}
-        {folded && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-black/45 backdrop-blur-[1px]">
-            <svg viewBox="0 0 24 24" className="h-10 w-10 drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">
-              <line x1="5" y1="5" x2="19" y2="19" stroke="#f5f5f5" strokeWidth="2.75" strokeLinecap="round" />
-              <line x1="19" y1="5" x2="5" y2="19" stroke="#f5f5f5" strokeWidth="2.75" strokeLinecap="round" />
-              <line x1="5" y1="5" x2="19" y2="19" stroke="#ef4444" strokeWidth="1.25" strokeLinecap="round" />
-              <line x1="19" y1="5" x2="5" y2="19" stroke="#ef4444" strokeWidth="1.25" strokeLinecap="round" />
-            </svg>
+      {/* Opponents' hidden cards collapse into a small overlapping stack
+          (PokerNow-style) so they take up far less room at the table -
+          except while it's actually their turn, when they fan out bigger
+          and face down so the acting seat reads clearly. Your own cards,
+          folded hands, and anyone's revealed cards at showdown, always
+          fan out fully (folded gets the dimmed cross overlay on top). */}
+      {!isMe && !showFaceUp && !isActingSeat && !folded ? (
+        <div className="relative flex h-16 w-12 items-center justify-center">
+          <div className="absolute -rotate-6">
+            <Card faceDown size="sm" />
           </div>
-        )}
-      </div>
+          <div className="absolute translate-x-1.5 rotate-6">
+            <Card faceDown size="sm" />
+          </div>
+        </div>
+      ) : (
+        <div className="relative flex gap-1.5">
+          {(cardsToShow ?? (holeCards ? [null, null, null] : [])).map((_, i) => (
+            <Card
+              key={i}
+              card={cardsToShow?.[i] ?? undefined}
+              faceDown={!showFaceUp || !cardsToShow?.[i]}
+              size={isWinner || isActingSeat ? "lg" : "md"}
+              highlight={isActingSeat || isWinner}
+            />
+          ))}
+          {folded && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-black/45 backdrop-blur-[1px]">
+              <svg viewBox="0 0 24 24" className="h-10 w-10 drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">
+                <line x1="5" y1="5" x2="19" y2="19" stroke="#f5f5f5" strokeWidth="2.75" strokeLinecap="round" />
+                <line x1="19" y1="5" x2="5" y2="19" stroke="#f5f5f5" strokeWidth="2.75" strokeLinecap="round" />
+                <line x1="5" y1="5" x2="19" y2="19" stroke="#ef4444" strokeWidth="1.25" strokeLinecap="round" />
+                <line x1="19" y1="5" x2="5" y2="19" stroke="#ef4444" strokeWidth="1.25" strokeLinecap="round" />
+              </svg>
+            </div>
+          )}
+        </div>
+      )}
 
       {isActingSeat && (
         <div className="w-full px-0.5">
