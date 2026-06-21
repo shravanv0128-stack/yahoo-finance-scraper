@@ -8,26 +8,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // PokerNow palette: dark grey/black chrome around a flat green felt
+        // table, white name plates, and gold/yellow chip accents.
         felt: {
-          DEFAULT: "#0c1410",
-          dark: "#05080a",
-          light: "#16241c",
+          DEFAULT: "#1c6b46", // table felt green
+          dark: "#1b1c1f", // page/chrome background (dark grey, not black)
+          light: "#2a2c30",
         },
         chip: {
-          red: "#ff4d4d",
-          blue: "#2fd0ff",
+          red: "#e0473e",
+          blue: "#3b8fd6",
           black: "#1c1c1c",
-          gold: "#39ff8c",
+          gold: "#f3c34d",
         },
         neon: {
-          DEFAULT: "#39ff8c",
-          dim: "#0d6b3c",
-          glow: "rgba(57,255,140,0.55)",
+          DEFAULT: "#f3c34d", // repurposed as the app's single accent color (gold)
+          dim: "#9c7a2a",
+          glow: "rgba(243,195,77,0.45)",
         },
       },
       boxShadow: {
-        table: "inset 0 0 120px rgba(0,0,0,0.75), 0 0 60px rgba(57,255,140,0.12)",
-        neon: "0 0 14px rgba(57,255,140,0.65), 0 0 4px rgba(57,255,140,0.9)",
+        table: "inset 0 0 90px rgba(0,0,0,0.5)",
+        neon: "0 0 10px rgba(243,195,77,0.4)",
       },
       keyframes: {
         fadein: {

@@ -29,21 +29,19 @@ export function PotDisplay({
           {pots!.map((p, i) => (
             <div
               key={i}
-              className="flex items-center gap-2 rounded-full bg-black/70 px-4 py-1 shadow-neon ring-1 ring-chip-gold/40"
+              className="flex items-center gap-2 rounded-md bg-zinc-800/95 px-4 py-1 ring-1 ring-black/40"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-chip-gold" />
-              <span className="text-[11px] font-bold uppercase tracking-wide text-chip-gold">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-white/60">
                 {p.label}
               </span>
-              <span className="text-xs font-bold text-white">${p.amount}</span>
+              <span className="text-xs font-bold text-white">{p.amount}</span>
             </div>
           ))}
-          <span className="text-[10px] font-medium text-white/50">Total ${pot}</span>
+          <span className="text-[10px] font-medium text-white/50">Total {pot}</span>
         </div>
       ) : (
-        <div className="flex items-center gap-2 rounded-full bg-black/70 px-5 py-1.5 shadow-neon ring-1 ring-chip-gold/40">
-          <span className="h-3 w-3 rounded-full bg-chip-gold" />
-          <span className="text-sm font-bold tracking-wide text-chip-gold">POT ${pot}</span>
+        <div className="flex items-center gap-2 rounded-md bg-zinc-800/95 px-5 py-1.5 ring-1 ring-black/40">
+          <span className="text-base font-bold tracking-wide text-white">{pot}</span>
         </div>
       )}
       {currentBet > 0 && (

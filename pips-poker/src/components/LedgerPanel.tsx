@@ -24,7 +24,7 @@ export function LedgerPanel({
   const [amounts, setAmounts] = useState<Record<string, number>>({});
 
   return (
-    <div className="mx-auto mt-4 w-full max-w-2xl rounded-lg border border-chip-gold/40 bg-felt p-4">
+    <div className="mx-auto mt-4 w-full max-w-2xl rounded-lg border border-black/50 bg-zinc-900 p-4">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-chip-gold">Ledger</h2>
       <div className="flex flex-col gap-2">
         {players.map((p) => {
@@ -33,7 +33,7 @@ export function LedgerPanel({
           const netColor = net > 0 ? "text-emerald-400" : net < 0 ? "text-chip-red" : "text-white/60";
           const netLabel = net > 0 ? `+$${net}` : net < 0 ? `-$${Math.abs(net)}` : "$0";
           return (
-            <div key={p.id} className="flex items-center justify-between gap-2 rounded bg-felt-dark/60 px-3 py-2">
+            <div key={p.id} className="flex items-center justify-between gap-2 rounded bg-zinc-800/60 px-3 py-2">
               <div>
                 <p className="text-sm font-semibold text-white">{p.displayName}</p>
                 <p className="text-xs text-white/60">Bought in: ${p.buyIn}</p>

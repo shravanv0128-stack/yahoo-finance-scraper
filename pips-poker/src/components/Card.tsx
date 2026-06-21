@@ -53,9 +53,9 @@ export function Card({
       >
         {/* Back face (card down) */}
         <div
-          className={`${highlightClasses} absolute inset-0 flex items-center justify-center rounded-md border border-white/10 bg-gradient-to-br from-blue-900 to-slate-950 shadow-md [backface-visibility:hidden]`}
+          className={`${highlightClasses} absolute inset-0 flex items-center justify-center rounded-md border border-black/30 bg-gradient-to-br from-red-800 to-red-950 shadow-md [backface-visibility:hidden]`}
         >
-          <div className="h-1/2 w-1/2 rounded-sm border border-white/20" />
+          <div className="h-1/2 w-1/2 rounded-sm border border-white/30" />
         </div>
 
         {/* Front face (card up) */}

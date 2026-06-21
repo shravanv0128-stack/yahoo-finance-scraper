@@ -111,7 +111,7 @@ export function ShowdownSummary({
   if (boards.length === 0 && shown.length === 0) return null;
 
   return (
-    <div className="mx-auto flex max-h-full w-full max-w-5xl flex-col gap-3 overflow-y-auto rounded-lg border border-chip-gold/40 bg-felt p-8">
+    <div className="mx-auto flex max-h-full w-full max-w-5xl flex-col gap-3 overflow-y-auto rounded-lg border border-black/50 bg-zinc-900 p-8">
       <h2 className="mb-2 text-center text-xl font-semibold uppercase tracking-wide text-chip-gold">
         {result?.ranItTwice ? "Showdown · Run it twice" : "Showdown"}
       </h2>
@@ -175,7 +175,7 @@ export function ShowdownSummary({
         return (
           <div
             key={`${handId ?? "hand"}-${i}`}
-            className={`rounded-md bg-felt-dark/60 p-4 ${i === boards.length - 1 || !result?.ranItTwice ? "animate-fadein" : ""}`}
+            className={`rounded-md bg-zinc-800/60 p-4 ${i === boards.length - 1 || !result?.ranItTwice ? "animate-fadein" : ""}`}
           >
             {result?.ranItTwice && (
               <p className="mb-2 text-center text-xs font-bold uppercase tracking-wide text-chip-gold">
@@ -231,7 +231,7 @@ export function ShowdownSummary({
               <div
                 key={p.seat}
                 className={`flex items-center justify-between rounded-md px-4 py-3 ${
-                  p.amountWon > 0 ? "bg-emerald-900/40 ring-1 ring-chip-gold/60" : "bg-felt-dark/60"
+                  p.amountWon > 0 ? "bg-emerald-900/40 ring-1 ring-chip-gold/60" : "bg-zinc-800/60"
                 }`}
               >
                 <div>

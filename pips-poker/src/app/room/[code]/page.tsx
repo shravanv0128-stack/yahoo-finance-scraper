@@ -366,9 +366,9 @@ export default function RoomPage() {
 
   return (
     <main className="flex h-screen flex-col overflow-y-auto bg-felt-dark">
-      <header className="flex items-center justify-between border-b border-neon/15 bg-black/60 px-4 py-3 text-white backdrop-blur-sm">
+      <header className="flex items-center justify-between border-b border-black/40 bg-zinc-950 px-4 py-3 text-white">
         <div className="flex items-center gap-6">
-          <span className="text-xl font-black tracking-wider text-neon drop-shadow-[0_0_8px_rgba(57,255,140,0.7)]">
+          <span className="text-xl font-black tracking-wider text-white">
             PIPS
           </span>
           <div className="flex items-center gap-5 text-[11px]">
@@ -389,10 +389,10 @@ export default function RoomPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowLedger((v) => !v)}
-            className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+            className={`rounded border px-3 py-2 text-xs font-semibold transition ${
               showLedger
-                ? "border-neon bg-neon text-felt-dark shadow-neon"
-                : "border-white/15 bg-black/40 text-white hover:border-neon/50"
+                ? "border-yellow-400 bg-yellow-400 text-black"
+                : "border-white/15 bg-zinc-800 text-white hover:border-yellow-400/50"
             }`}
           >
             Ledger
@@ -401,10 +401,10 @@ export default function RoomPage() {
             <button
               onClick={() => handleToggleAway(!myPlayer?.is_away)}
               disabled={busy}
-              className={`rounded-full border px-3 py-2 text-xs font-semibold transition disabled:opacity-40 ${
+              className={`rounded border px-3 py-2 text-xs font-semibold transition disabled:opacity-40 ${
                 myPlayer?.is_away
-                  ? "border-neon bg-neon text-felt-dark shadow-neon"
-                  : "border-white/15 bg-black/40 text-white hover:border-neon/50"
+                  ? "border-yellow-400 bg-yellow-400 text-black"
+                  : "border-white/15 bg-zinc-800 text-white hover:border-yellow-400/50"
               }`}
             >
               {myPlayer?.is_away ? "I'm back" : "I'm away"}
@@ -414,7 +414,7 @@ export default function RoomPage() {
             <button
               onClick={handleStart}
               disabled={busy || eligiblePlayers.length < 2}
-              className="rounded-full bg-neon px-4 py-2 text-sm font-bold text-felt-dark shadow-neon transition disabled:opacity-40"
+              className="rounded bg-green-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-green-500 disabled:opacity-40"
             >
               Start hand
             </button>
@@ -422,10 +422,10 @@ export default function RoomPage() {
           {isLeader && transferTargets.length > 0 && (
             <button
               onClick={() => setShowTransfer((v) => !v)}
-              className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+              className={`rounded border px-3 py-2 text-xs font-semibold transition ${
                 showTransfer
-                  ? "border-neon bg-neon text-felt-dark shadow-neon"
-                  : "border-white/15 bg-black/40 text-white hover:border-neon/50"
+                  ? "border-yellow-400 bg-yellow-400 text-black"
+                  : "border-white/15 bg-zinc-800 text-white hover:border-yellow-400/50"
               }`}
             >
               Transfer leadership
@@ -434,10 +434,10 @@ export default function RoomPage() {
           {isLeader && kickTargets.length > 0 && (
             <button
               onClick={() => setShowKick((v) => !v)}
-              className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+              className={`rounded border px-3 py-2 text-xs font-semibold transition ${
                 showKick
-                  ? "border-chip-red bg-chip-red text-white shadow-none"
-                  : "border-white/15 bg-black/40 text-white hover:border-chip-red/50"
+                  ? "border-chip-red bg-chip-red text-white"
+                  : "border-white/15 bg-zinc-800 text-white hover:border-chip-red/50"
               }`}
             >
               Remove player
@@ -506,7 +506,7 @@ export default function RoomPage() {
       )}
 
       {iBusted && (
-        <div className="mx-auto mt-4 flex w-full max-w-sm flex-col items-center gap-2 rounded-lg border border-chip-gold/40 bg-felt p-3">
+        <div className="mx-auto mt-4 flex w-full max-w-sm flex-col items-center gap-2 rounded-lg border border-black/50 bg-zinc-900 p-3">
           <p className="text-center text-xs text-white/70">
             You're out of chips. Buy back in to get dealt into the next hand.
           </p>
@@ -538,7 +538,7 @@ export default function RoomPage() {
       )}
 
       {!amSeated && sessionLoaded && !session && (
-        <div className="mx-auto mt-6 flex w-full max-w-sm flex-col items-center gap-2 rounded-lg border border-felt-light bg-felt p-4">
+        <div className="mx-auto mt-6 flex w-full max-w-sm flex-col items-center gap-2 rounded-lg border border-black/50 bg-zinc-900 p-4">
           <button
             onClick={() => signInWithGoogle()}
             className="rounded bg-white px-6 py-3 text-sm font-semibold text-felt-dark shadow"
@@ -549,12 +549,12 @@ export default function RoomPage() {
       )}
 
       {!amSeated && session && (
-        <div className="mx-auto mt-6 flex w-full max-w-sm flex-col gap-2 rounded-lg border border-felt-light bg-felt p-4">
-          <label className="text-xs uppercase tracking-wide text-felt-light">Your display name</label>
+        <div className="mx-auto mt-6 flex w-full max-w-sm flex-col gap-2 rounded-lg border border-black/50 bg-zinc-900 p-4">
+          <label className="text-xs uppercase tracking-wide text-white/50">Your display name</label>
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+            className="rounded border border-black/40 bg-zinc-800 px-3 py-2 text-sm text-white"
             placeholder="e.g. Ada"
           />
           <button
@@ -625,7 +625,7 @@ export default function RoomPage() {
       )}
 
       {amSeated && (
-        <div className="flex w-full flex-shrink-0 flex-col items-stretch gap-3 border-t border-white/10 bg-black/40 px-4 py-3 sm:flex-row">
+        <div className="flex w-full flex-shrink-0 flex-col items-stretch gap-3 border-t border-black/40 bg-zinc-950 px-4 py-3 sm:flex-row">
           <ChatPanel messages={chatMessages} myUserId={myUserId} disabled={busy} onSend={handleSendChat} />
 
           <div className="flex flex-1 items-stretch">

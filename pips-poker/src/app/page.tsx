@@ -111,7 +111,7 @@ export default function HomePage() {
       )}
 
       {session && (
-        <div className="w-full max-w-sm rounded-lg border border-felt-light bg-felt p-6 shadow-table">
+        <div className="w-full max-w-sm rounded-lg border border-black/50 bg-zinc-900 p-6 shadow-table">
           <div className="mb-4 flex items-center justify-between text-xs text-white/60">
             <span>Signed in as {session.user.email}</span>
             <button onClick={() => signOut()} className="text-white underline">
@@ -123,7 +123,7 @@ export default function HomePage() {
             Your display name
           </label>
           <input
-            className="mb-4 w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+            className="mb-4 w-full rounded border border-black/40 bg-zinc-800 px-3 py-2 text-sm text-white"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="e.g. Ada"
@@ -131,7 +131,7 @@ export default function HomePage() {
 
           <h2 className="mb-2 text-sm font-semibold text-white">Create a room</h2>
           <input
-            className="mb-2 w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+            className="mb-2 w-full rounded border border-black/40 bg-zinc-800 px-3 py-2 text-sm text-white"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Table name"
@@ -145,7 +145,7 @@ export default function HomePage() {
                 type="number"
                 step="0.01"
                 min="0"
-                className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+                className="w-full rounded border border-black/40 bg-zinc-800 px-3 py-2 text-sm text-white"
                 value={anteAmount}
                 onChange={(e) => setAnteAmount(e.target.value)}
               />
@@ -158,7 +158,7 @@ export default function HomePage() {
                 type="number"
                 step="1"
                 min="1"
-                className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+                className="w-full rounded border border-black/40 bg-zinc-800 px-3 py-2 text-sm text-white"
                 value={startingStack}
                 onChange={(e) => setStartingStack(e.target.value)}
               />
@@ -172,7 +172,7 @@ export default function HomePage() {
                 step="1"
                 min="2"
                 max="8"
-                className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+                className="w-full rounded border border-black/40 bg-zinc-800 px-3 py-2 text-sm text-white"
                 value={maxPlayers}
                 onChange={(e) => setMaxPlayers(e.target.value)}
               />
@@ -186,7 +186,7 @@ export default function HomePage() {
                 step="5"
                 min="10"
                 max="300"
-                className="w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+                className="w-full rounded border border-black/40 bg-zinc-800 px-3 py-2 text-sm text-white"
                 value={actTimeoutSeconds}
                 onChange={(e) => setActTimeoutSeconds(e.target.value)}
               />
@@ -215,7 +215,7 @@ export default function HomePage() {
 
           <h2 className="mb-2 text-sm font-semibold text-white">Join a room</h2>
           <input
-            className="mb-2 w-full rounded border border-felt-light bg-felt-dark px-3 py-2 text-sm text-white"
+            className="mb-2 w-full rounded border border-black/40 bg-zinc-800 px-3 py-2 text-sm text-white"
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
             placeholder="Room code, e.g. ABCD12"
