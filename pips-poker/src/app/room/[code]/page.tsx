@@ -72,11 +72,13 @@ export default function RoomPage() {
   const [showdownVisible, setShowdownVisible] = useState(false);
   useEffect(() => {
     const gs = data?.gameState;
-    // Skip the showdown overlay entirely when everyone else folded - there's
-    // no hand to compare or cards to reveal, so the popup would just say
-    // "X wins" with nothing else to show. The pot already moved to the
-    // winner's stack; the table itself is enough.
-    if (gs?.phase === "hand_complete" && !gs.showdown_result?.uncontested) {
+    // The full showdown breakdown popup is only worth showing when the hand
+    // went through an all-in pause (run it once or run it twice) - that's
+    // the one case with a runout/board reveal sequence actually worth
+    // narrating. A normal hand that just plays out to the river, or one
+    // that ends because everyone else folded, doesn't get the popup; the
+    // table itself (revealed cards + the winner halo) already shows who won.
+    if (gs?.phase === "hand_complete" && gs.showdown_result?.wasAllInRunout) {
       setShowdownSnapshot({
         result: gs.showdown_result,
         handId: gs.hand_id,
@@ -363,7 +365,7 @@ export default function RoomPage() {
   const kickTargets = activePlayers.filter((p) => p.user_id !== leaderId);
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-felt-dark">
+    <main className="flex h-screen flex-col overflow-y-auto bg-felt-dark">
       <header className="flex items-center justify-between border-b border-neon/15 bg-black/60 px-4 py-3 text-white backdrop-blur-sm">
         <div className="flex items-center gap-6">
           <span className="text-xl font-black tracking-wider text-neon drop-shadow-[0_0_8px_rgba(57,255,140,0.7)]">

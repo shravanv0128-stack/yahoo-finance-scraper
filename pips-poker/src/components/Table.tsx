@@ -79,7 +79,7 @@ export function Table({
         })();
 
   return (
-    <div className="relative mx-auto aspect-[16/10] w-full max-w-5xl max-h-full">
+    <div className="relative mx-auto h-full max-h-full w-full max-w-5xl" style={{ aspectRatio: "16/10" }}>
       {/* Outer glow halo behind the whole table, like light bleeding off a
           backlit panel. */}
       <div className="absolute inset-[2%] rounded-[50%] bg-neon/5 blur-3xl" />

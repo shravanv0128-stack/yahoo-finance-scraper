@@ -78,16 +78,23 @@ export function PlayerSeat({
         </div>
       )}
 
-      <div className="flex gap-1">
+      <div className="relative flex gap-1">
         {(cardsToShow ?? (holeCards ? [null, null, null] : [])).map((_, i) => (
           <Card
             key={i}
             card={cardsToShow?.[i] ?? undefined}
             faceDown={!showFaceUp || !cardsToShow?.[i]}
-            size={isWinner ? "lg" : isMe && isActingSeat ? "lg" : isMe ? "md" : "sm"}
+            size={isWinner || isActingSeat ? "lg" : "md"}
             highlight={isActingSeat || isWinner}
           />
         ))}
+        {folded && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span className="text-4xl font-black text-red-500/90 drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]">
+              ✕
+            </span>
+          </div>
+        )}
       </div>
 
       {isActingSeat && (
@@ -123,7 +130,7 @@ export function PlayerSeat({
         )}
       <div
         className={`relative flex flex-col items-center justify-center rounded-full border bg-gradient-to-b from-zinc-800/90 via-black/90 to-black text-center backdrop-blur-sm transition-all ${
-          isMe && isActingSeat ? "h-24 w-24" : "h-20 w-20"
+          isActingSeat ? "h-24 w-24" : "h-20 w-20"
         } ${
           isWinner
             ? "border-amber-300 shadow-[0_0_16px_4px_rgba(251,191,36,0.6)]"

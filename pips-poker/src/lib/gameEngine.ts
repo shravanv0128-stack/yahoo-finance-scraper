@@ -9,7 +9,7 @@
 // duplicating logic and risking the rules drifting apart between routes.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { freshShuffledDeck, drawCards, drawReplacements } from "./deck";
+import { freshShuffledDeck, drawCards } from "./deck";
 import {
   Card,
   GamePhase,
@@ -291,6 +291,19 @@ export async function applyBettingAction(
     if (contenders.length <= 1) {
       // Everyone else folded - skip straight to showdown logic (single winner).
       newPhase = "showdown";
+    } else if (gameState.phase === "flop_betting") {
+      // Always go through draw_swap next, even if someone just went all-in -
+      // it's each player's one chance to change their hand and has to happen
+      // before any all-in pause is decided. That all-in check happens again
+      // once the swap round closes (see applySwap).
+      newPhase = "draw_swap";
+      const resetPlayers = resetForNewRound(result.state.players);
+      for (const p of resetPlayers) {
+        await supabase
+          .from("hand_players")
+          .update({ current_bet: 0, has_acted_this_round: p.has_acted_this_round })
+          .eq("id", p.hand_player_id);
+      }
     } else if (activePlayers.length <= 1 && gameState.phase !== "river_betting") {
       // Every remaining contender (other than at most one) is all-in with at
       // least one more street still to come - pause and let the table decide
@@ -512,7 +525,7 @@ async function resolveRunItTwice(
     })
     .eq("room_id", roomId);
 
-  await runShowdown(supabase, roomId, handId, board2 ? [board1, board2] : [board1]);
+  await runShowdown(supabase, roomId, handId, board2 ? [board1, board2] : [board1], true);
 
   return { boards: board2 ? [board1, board2] : [board1] };
 }
@@ -542,12 +555,13 @@ export async function applySwap(
 
   const { data: room, error: roomError } = await supabase
     .from("rooms")
-    .select("small_bet, act_timeout_seconds")
+    .select("small_bet, act_timeout_seconds, allow_run_it_twice")
     .eq("id", roomId)
     .single();
   if (roomError) throw roomError;
   const minBet = room.small_bet ?? 1;
   const actTimeout = room.act_timeout_seconds ?? DEFAULT_ACT_TIMEOUT_SECONDS;
+  const allowRunItTwice = room.allow_run_it_twice !== false;
 
   const { data: handPlayer, error: hpError } = await supabase
     .from("hand_players")
@@ -570,15 +584,18 @@ export async function applySwap(
 
   const currentCards: Card[] = holeRow.cards;
   const discardSet = new Set(discardIndices);
-  const keptCards = currentCards.filter((_, i) => !discardSet.has(i));
-  const discardCount = currentCards.length - keptCards.length;
+  const discardCount = discardIndices.length;
 
+  // Replace discarded cards in place - kept cards stay exactly where they
+  // were, and each discarded slot gets exactly one fresh card in its spot,
+  // so the player's hand never visibly reshuffles positions on a swap.
   let deck: Card[] = gameState.deck;
-  let newHand = keptCards;
+  let newHand = currentCards;
   if (discardCount > 0) {
-    const result = drawReplacements(deck, keptCards, discardCount);
-    newHand = result.newHand;
-    deck = result.remaining;
+    const { drawn, remaining } = drawCards(deck, discardCount);
+    deck = remaining;
+    let drawIdx = 0;
+    newHand = currentCards.map((card, i) => (discardSet.has(i) ? drawn[drawIdx++] : card));
   }
 
   await supabase.from("hole_cards").update({ cards: newHand }).eq("id", holeRow.id);
@@ -599,9 +616,6 @@ export async function applySwap(
   const allSwapped = contenders.every((p) => (p.id === handPlayerId ? true : p.has_swapped));
 
   if (allSwapped) {
-    const { drawn, remaining } = drawCards(deck, 1); // deal the turn card
-    const newCommunity = [...gameState.community_cards, ...drawn];
-
     const resetPlayers = resetForNewRound(
       contenders.map((p) => ({
         hand_player_id: p.id,
@@ -620,7 +634,35 @@ export async function applySwap(
         .eq("id", p.hand_player_id);
     }
 
-    const firstActive = resetPlayers.find((p) => p.status === "active");
+    const activePlayers = resetPlayers.filter((p) => p.status === "active");
+
+    if (activePlayers.length <= 1) {
+      // Everyone left (other than at most one) is already all-in coming out
+      // of the swap - pause here exactly like the betting-round all-in pause
+      // does, instead of dealing the turn and forcing the table straight to
+      // a turn-betting round nobody can actually act in.
+      await supabase
+        .from("game_state")
+        .update({
+          phase: "all_in_runout" as GamePhase,
+          deck,
+          active_seat: null,
+          act_deadline: null,
+          awaiting_run_it_twice: allowRunItTwice,
+          run_it_twice_votes: {},
+          updated_at: new Date().toISOString(),
+        })
+        .eq("room_id", roomId);
+      await supabase.from("hands").update({ phase: "all_in_runout" }).eq("id", handId);
+      if (!allowRunItTwice) {
+        await resolveRunItTwice(supabase, roomId, handId, false);
+      }
+      return { phase: "all_in_runout", advanced: true };
+    }
+
+    const { drawn, remaining } = drawCards(deck, 1); // deal the turn card
+    const newCommunity = [...gameState.community_cards, ...drawn];
+    const firstActive = activePlayers[0];
 
     await supabase
       .from("game_state")
@@ -654,7 +696,8 @@ export async function runShowdown(
   supabase: SupabaseClient,
   roomId: string,
   handId: string,
-  boards?: Card[][]
+  boards?: Card[][],
+  wasAllInRunout: boolean = false
 ) {
   const { data: gameState, error: gsError } = await supabase
     .from("game_state")
@@ -805,6 +848,7 @@ export async function runShowdown(
   const showdownResult: ShowdownResult = {
     ranItTwice,
     uncontested: contenders.length === 1,
+    wasAllInRunout,
     boards: boardResults,
   };
 

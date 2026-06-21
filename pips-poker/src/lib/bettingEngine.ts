@@ -130,15 +130,23 @@ export function applyAction(
       break;
     }
     case "all_in": {
-      const allInAmount = player.chip_stack;
-      if (allInAmount <= 0) {
+      if (player.chip_stack <= 0) {
         return { state, error: "Player has no chips left to go all-in with" };
       }
-      player.chip_stack = 0;
+      // Pips is pot-limit: nobody can ever put in more than the pot size in
+      // one action, so "all in" only commits a player's whole stack when
+      // that stack is at or under the pot. A bigger stack gets capped at the
+      // pot size instead - the rest stays behind, uncommitted, and the
+      // player is NOT marked all_in (they still have chips to act with).
+      const allInAmount = Math.min(player.chip_stack, state.pot);
+      if (allInAmount <= 0) {
+        return { state, error: "Max bet is the size of the pot" };
+      }
+      player.chip_stack -= allInAmount;
       player.current_bet += allInAmount;
       player.total_committed += allInAmount;
       potDelta = allInAmount;
-      player.status = "all_in";
+      if (player.chip_stack === 0) player.status = "all_in";
       if (player.current_bet > state.currentBet) {
         const raiseIncrement = player.current_bet - state.currentBet;
         newMinRaise = Math.max(state.minRaise, raiseIncrement);

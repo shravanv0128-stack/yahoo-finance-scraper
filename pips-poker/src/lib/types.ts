@@ -167,6 +167,12 @@ export interface ShowdownBoardResult {
 export interface ShowdownResult {
   ranItTwice: boolean;
   uncontested: boolean; // true when everyone else folded (no cards need showing)
+  // True when this hand went through the all-in pause (run it once or run it
+  // twice) before showdown - that's the only case worth a full showdown
+  // breakdown popup. A normal hand that just played out to the river with
+  // everyone still able to act doesn't get the popup; the table itself
+  // (revealed cards + winner halo) already shows who won.
+  wasAllInRunout: boolean;
   boards: ShowdownBoardResult[];
 }
 
