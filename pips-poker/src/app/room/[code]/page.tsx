@@ -5,7 +5,7 @@
 // as the room identifier for /api/rooms/:roomId/* calls.
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase, getSession, signInWithGoogle } from "@/lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
 import { useRoomRealtime } from "@/hooks/useRoomRealtime";
@@ -23,6 +23,7 @@ const BETTING_PHASES = new Set(["preflop_betting", "flop_betting", "turn_betting
 
 export default function RoomPage() {
   const params = useParams<{ code: string }>();
+  const router = useRouter();
   const roomId = params.code;
   const { data, error, loading, refresh } = useRoomRealtime(roomId);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export default function RoomPage() {
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [showKick, setShowKick] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [smallBlindInput, setSmallBlindInput] = useState("");
@@ -99,6 +101,18 @@ export default function RoomPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.gameState?.phase, data?.gameState?.hand_id]);
+
+  // If the room leader removes us from the table, our own player row flips
+  // to is_active=false on the next poll - send us back to the home page
+  // (create/join-by-code) rather than leaving us stuck looking at a table
+  // we're no longer part of.
+  useEffect(() => {
+    if (!data) return;
+    const me = data.players.find((p) => p.user_id === data.myUserId);
+    if (me && !me.is_active) {
+      router.push("/");
+    }
+  }, [data, router]);
 
   async function authedFetch(url: string, body: unknown) {
     const token = session?.access_token;
@@ -234,6 +248,19 @@ export default function RoomPage() {
     }
   }
 
+  async function handleKick(playerId: string) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      await authedFetch(`/api/rooms/kick`, { roomId, playerId });
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to remove player");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleSetGameMode(gameMode: GameMode) {
     setActionError(null);
     setBusy(true);
@@ -316,7 +343,8 @@ export default function RoomPage() {
   // there's no live hand to show their showdown result in, they drop off the
   // felt entirely until they buy back in - matching "only people with money
   // are still in" for the waiting-room view.
-  const visiblePlayers = isHandLive ? players : players.filter((p) => p.chip_stack > 0);
+  const activePlayers = players.filter((p) => p.is_active);
+  const visiblePlayers = isHandLive ? activePlayers : activePlayers.filter((p) => p.chip_stack > 0);
   const eligiblePlayers = players.filter((p) => p.is_active && !p.is_away && p.chip_stack > 0);
 
   const seats: TableSeatData[] = visiblePlayers.map((p) => {
@@ -358,7 +386,8 @@ export default function RoomPage() {
   const amInLiveHand = isHandLive && myHandPlayer && myHandPlayer.status !== "folded";
   const canStartHand = !isHandLive || gameState?.phase === "hand_complete";
   const iBusted = amSeated && (myPlayer?.chip_stack ?? 0) <= 0;
-  const transferTargets = players.filter((p) => p.user_id !== leaderId);
+  const transferTargets = activePlayers.filter((p) => p.user_id !== leaderId);
+  const kickTargets = activePlayers.filter((p) => p.user_id !== leaderId);
 
   const currentGameMode: GameMode = gameState?.game_mode ?? "pips";
   const rotationMode: RotationMode = room.rotation_mode ?? "dealer_choice";
@@ -475,6 +504,18 @@ export default function RoomPage() {
               Transfer leadership
             </button>
           )}
+          {isLeader && kickTargets.length > 0 && (
+            <button
+              onClick={() => setShowKick((v) => !v)}
+              className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                showKick
+                  ? "border-chip-red bg-chip-red text-white shadow-none"
+                  : "border-white/15 bg-black/40 text-white hover:border-chip-red/50"
+              }`}
+            >
+              Remove player
+            </button>
+          )}
         </div>
       </header>
 
@@ -490,6 +531,26 @@ export default function RoomPage() {
                 onClick={() => handleTransferLeader(p.user_id)}
                 disabled={busy}
                 className="rounded border border-white/15 bg-felt-dark px-3 py-2 text-left text-sm text-white transition hover:border-neon/50 disabled:opacity-40"
+              >
+                {p.display_name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showKick && isLeader && (
+        <div className="mx-auto mt-2 flex w-full max-w-md flex-col gap-2 rounded-lg border border-chip-red/40 bg-black/60 p-3">
+          <p className="text-center text-xs text-white/60">
+            Remove a player from the table. They&apos;ll be sent back to the home page.
+          </p>
+          <div className="flex flex-col gap-1">
+            {kickTargets.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => handleKick(p.id)}
+                disabled={busy}
+                className="rounded border border-white/15 bg-felt-dark px-3 py-2 text-left text-sm text-white transition hover:border-chip-red disabled:opacity-40"
               >
                 {p.display_name}
               </button>
