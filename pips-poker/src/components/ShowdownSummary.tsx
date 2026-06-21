@@ -114,8 +114,8 @@ export function ShowdownSummary({
   if (boards.length === 0 && shown.length === 0) return null;
 
   return (
-    <div className="mx-auto flex max-h-full w-full max-w-3xl flex-col gap-2 overflow-y-auto rounded-lg border border-chip-gold/40 bg-felt p-6">
-      <h2 className="mb-2 text-center text-sm font-semibold uppercase tracking-wide text-chip-gold">
+    <div className="mx-auto flex max-h-full w-full max-w-5xl flex-col gap-3 overflow-y-auto rounded-lg border border-chip-gold/40 bg-felt p-8">
+      <h2 className="mb-2 text-center text-xl font-semibold uppercase tracking-wide text-chip-gold">
         {result?.ranItTwice ? "Showdown · Run it twice" : "Showdown"}
       </h2>
 
@@ -130,11 +130,11 @@ export function ShowdownSummary({
         <div className="flex items-center justify-center py-8">
           <div className="flex gap-1.5">
             {sharedFlop.map((c, j) => (
-              <Card key={j} card={c} size="md" />
+              <Card key={j} card={c} size="lg" />
             ))}
           </div>
           {result?.ranItTwice && (
-            <div className="relative ml-6 h-32 w-24">
+            <div className="relative ml-6 h-40 w-28">
               {boards.map((b, i) => {
                 const cards = perBoardDiffering[i];
                 if (cards.length === 0) return null;
@@ -144,12 +144,12 @@ export function ShowdownSummary({
                     key={`${handId ?? "hand"}-fan-${i}`}
                     className={`absolute left-0 top-1/2 flex gap-1.5 ${
                       i === 0
-                        ? "-translate-y-12 origin-bottom-left rotate-[-18deg]"
-                        : "translate-y-2 origin-top-left rotate-[18deg]"
+                        ? "-translate-y-14 origin-bottom-left rotate-[-18deg]"
+                        : "translate-y-3 origin-top-left rotate-[18deg]"
                     }`}
                   >
                     {cards.map((c, j) => (
-                      <Card key={j} card={c} size="md" faceDown={revealedCount < startIdx + j + 1} />
+                      <Card key={j} card={c} size="lg" faceDown={revealedCount < startIdx + j + 1} />
                     ))}
                   </div>
                 );
@@ -164,7 +164,7 @@ export function ShowdownSummary({
       {!result?.ranItTwice && perBoardDiffering[0]?.length > 0 && (
         <div className="flex justify-center gap-1 py-3">
           {perBoardDiffering[0].map((c, j) => (
-            <Card key={j} card={c} size="md" faceDown={revealedCount < j + 1} />
+            <Card key={j} card={c} size="lg" faceDown={revealedCount < j + 1} />
           ))}
         </div>
       )}
@@ -178,38 +178,38 @@ export function ShowdownSummary({
         return (
           <div
             key={`${handId ?? "hand"}-${i}`}
-            className={`rounded-md bg-felt-dark/60 p-3 ${i === boards.length - 1 || !result?.ranItTwice ? "animate-fadein" : ""}`}
+            className={`rounded-md bg-felt-dark/60 p-4 ${i === boards.length - 1 || !result?.ranItTwice ? "animate-fadein" : ""}`}
           >
             {result?.ranItTwice && (
-              <p className="mb-1.5 text-center text-[10px] font-bold uppercase tracking-wide text-chip-gold">
+              <p className="mb-2 text-center text-xs font-bold uppercase tracking-wide text-chip-gold">
                 Board {i + 1}
               </p>
             )}
 
             {result?.uncontested ? (
-              <p className="text-center text-sm font-semibold text-emerald-400">
+              <p className="text-center text-base font-semibold text-emerald-400">
                 {b.pokerWinners[0]?.displayName} wins (everyone else folded)
               </p>
             ) : (
-              <div className={`grid grid-cols-1 gap-2 ${showPips ? "sm:grid-cols-2" : ""}`}>
-                <div className="rounded bg-black/30 px-3 py-2">
-                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-300">
+              <div className={`grid grid-cols-1 gap-3 ${showPips ? "sm:grid-cols-2" : ""}`}>
+                <div className="rounded bg-black/30 px-4 py-3">
+                  <p className="mb-1.5 text-sm font-bold uppercase tracking-wide text-amber-300">
                     🂡 Best poker hand
                   </p>
                   {groupWinners(b.pokerWinners, (w) => w.handLabel).map((g, j) => (
-                    <p key={j} className="text-sm text-white">
+                    <p key={j} className="text-base text-white">
                       <span className="font-semibold">{joinNames(g.displayNames)}</span>
                       <span className="text-white/50"> — {g.key}</span>
                     </p>
                   ))}
                 </div>
                 {showPips && b.pipWinners.length > 0 && (
-                  <div className="rounded bg-black/30 px-3 py-2">
-                    <p className="mb-1 text-xs font-bold uppercase tracking-wide text-chip-blue">
+                  <div className="rounded bg-black/30 px-4 py-3">
+                    <p className="mb-1.5 text-sm font-bold uppercase tracking-wide text-chip-blue">
                       ◆ Highest pips
                     </p>
                     {groupWinners(b.pipWinners, (w) => `${w.pipTotal} pips`).map((g, j) => (
-                      <p key={j} className="text-sm text-white">
+                      <p key={j} className="text-base text-white">
                         <span className="font-semibold">{joinNames(g.displayNames)}</span>
                         <span className="text-white/50"> — {g.key}</span>
                       </p>
@@ -222,7 +222,7 @@ export function ShowdownSummary({
         );
       })}
       {result?.ranItTwice && revealedCount < totalDiffering && (
-        <p className="text-center text-xs italic text-white/60">
+        <p className="text-center text-sm italic text-white/60">
           {revealedCount < (cumulative[0] ?? 0) ? "Revealing board 1…" : "Revealing board 2…"}
         </p>
       )}
@@ -231,27 +231,27 @@ export function ShowdownSummary({
       {shown.length > 0 && (
         <>
           <div className="h-px bg-white/10" />
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {shown.map((p) => (
               <div
                 key={p.seat}
-                className={`flex items-center justify-between rounded-md px-3 py-2 ${
+                className={`flex items-center justify-between rounded-md px-4 py-3 ${
                   p.amountWon > 0 ? "bg-emerald-900/40 ring-1 ring-chip-gold/60" : "bg-felt-dark/60"
                 }`}
               >
                 <div>
-                  <p className="text-base font-semibold text-white">
+                  <p className="text-lg font-semibold text-white">
                     {p.displayName}
                     {p.amountWon > 0 && <span className="ml-2 text-chip-gold">+${p.amountWon}</span>}
                   </p>
-                  <p className="text-xs text-emerald-300">Stack: ${p.chipStack}</p>
+                  <p className="text-sm text-emerald-300">Stack: ${p.chipStack}</p>
                   {p.revealedPipTotal !== null && (
-                    <p className="text-xs text-chip-blue">Pip total: {p.revealedPipTotal}</p>
+                    <p className="text-sm text-chip-blue">Pip total: {p.revealedPipTotal}</p>
                   )}
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5">
                   {(p.revealedCards ?? []).map((c, i) => (
-                    <Card key={i} card={c} size="md" />
+                    <Card key={i} card={c} size="lg" />
                   ))}
                 </div>
               </div>
