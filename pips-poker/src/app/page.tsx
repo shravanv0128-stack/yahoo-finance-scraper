@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, getSession, signInWithGoogle, signOut } from "@/lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
+import { Spinner } from "@/components/Spinner";
 
 export default function HomePage() {
   const router = useRouter();
@@ -104,7 +105,7 @@ export default function HomePage() {
       {sessionLoaded && !session && (
         <button
           onClick={() => signInWithGoogle()}
-          className="rounded bg-white px-6 py-3 text-sm font-semibold text-felt-dark shadow"
+          className="rounded bg-white px-6 py-3 text-sm font-semibold text-felt-dark shadow transition hover:-translate-y-0.5 hover:shadow-md"
         >
           Sign in with Google
         </button>
@@ -202,15 +203,16 @@ export default function HomePage() {
             Allow running it twice when everyone&apos;s all-in
           </label>
           <p className="mb-2 text-[11px] text-white/50">
-            Every player puts in the bomb pot each hand — no blinds. Bets are plain dollar amounts; the
+            Every player puts in the bomb pot each hand, no blinds. Bets are plain dollar amounts; the
             most you can ever bet or raise is the size of the pot.
           </p>
           <button
             onClick={createRoom}
             disabled={busy || !displayName}
-            className="mb-6 w-full rounded bg-chip-gold px-3 py-2 text-sm font-semibold text-felt-dark disabled:opacity-50"
+            className="mb-6 flex w-full items-center justify-center gap-2 rounded bg-chip-gold px-3 py-2 text-sm font-semibold text-felt-dark transition hover:-translate-y-0.5 hover:brightness-105 disabled:pointer-events-none disabled:opacity-50 disabled:hover:translate-y-0"
           >
-            Create room
+            {busy && <Spinner />}
+            {busy ? "Creating..." : "Create room"}
           </button>
 
           <h2 className="mb-2 text-sm font-semibold text-white">Join a room</h2>
@@ -223,9 +225,10 @@ export default function HomePage() {
           <button
             onClick={joinRoom}
             disabled={busy || !displayName || !joinCode}
-            className="w-full rounded bg-chip-blue px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded border border-white/15 bg-zinc-800 px-3 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-chip-gold/50 disabled:pointer-events-none disabled:opacity-50 disabled:hover:translate-y-0"
           >
-            Join room
+            {busy && <Spinner />}
+            {busy ? "Joining..." : "Join room"}
           </button>
         </div>
       )}

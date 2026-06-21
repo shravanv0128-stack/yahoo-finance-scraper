@@ -17,6 +17,7 @@ import { LedgerPanel } from "@/components/LedgerPanel";
 import { RunItTwicePrompt } from "@/components/RunItTwicePrompt";
 import { ShowMuckPrompt } from "@/components/ShowMuckPrompt";
 import { ChatPanel } from "@/components/ChatPanel";
+import { Spinner } from "@/components/Spinner";
 import type { BettingAction, ShowDecision, ShowdownResult } from "@/lib/types";
 
 const BETTING_PHASES = new Set(["flop_betting", "turn_betting", "river_betting"]);
@@ -290,8 +291,35 @@ export default function RoomPage() {
 
   if (loading && !data) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-felt-dark text-white">
-        Loading table...
+      <main className="flex h-screen flex-col bg-felt-dark">
+        <div className="h-[57px] animate-pulse border-b border-black/40 bg-zinc-950" />
+        <div className="relative flex flex-1 items-center justify-center px-4 py-6">
+          <div className="relative mx-auto h-full max-h-full w-full max-w-7xl animate-pulse" style={{ aspectRatio: "16/10" }}>
+            <div className="absolute inset-[4%] rounded-[50%] bg-zinc-900" />
+            <div className="absolute inset-[7%] rounded-[50%] bg-zinc-800" />
+            <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
+              <div className="h-8 w-24 rounded-md bg-zinc-700" />
+              <div className="flex gap-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-32 w-[5.75rem] rounded-md bg-zinc-700" />
+                ))}
+              </div>
+            </div>
+            {Array.from({ length: 6 }).map((_, i) => {
+              const angle = Math.PI / 2 + i * ((2 * Math.PI) / 6);
+              const left = `${50 + 44 * Math.cos(angle)}%`;
+              const top = `${50 + 30 * Math.sin(angle)}%`;
+              return (
+                <div
+                  key={i}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 rounded-md bg-zinc-700"
+                  style={{ left, top, width: "8rem", height: "3.5rem" }}
+                />
+              );
+            })}
+          </div>
+        </div>
+        <div className="h-20 animate-pulse border-t border-black/40 bg-zinc-950" />
       </main>
     );
   }
@@ -403,10 +431,10 @@ export default function RoomPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowLedger((v) => !v)}
-            className={`rounded border px-3 py-2 text-xs font-semibold transition ${
+            className={`rounded border px-3 py-2 text-xs font-semibold transition hover:-translate-y-0.5 ${
               showLedger
-                ? "border-yellow-400 bg-yellow-400 text-black"
-                : "border-white/15 bg-zinc-800 text-white hover:border-yellow-400/50"
+                ? "border-chip-gold bg-chip-gold text-felt-dark"
+                : "border-white/15 bg-zinc-800 text-white hover:border-chip-gold/50"
             }`}
           >
             Ledger
@@ -415,10 +443,10 @@ export default function RoomPage() {
             <button
               onClick={() => handleToggleAway(!myPlayer?.is_away)}
               disabled={busy}
-              className={`rounded border px-3 py-2 text-xs font-semibold transition disabled:opacity-40 ${
+              className={`rounded border px-3 py-2 text-xs font-semibold transition hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 ${
                 myPlayer?.is_away
-                  ? "border-yellow-400 bg-yellow-400 text-black"
-                  : "border-white/15 bg-zinc-800 text-white hover:border-yellow-400/50"
+                  ? "border-chip-gold bg-chip-gold text-felt-dark"
+                  : "border-white/15 bg-zinc-800 text-white hover:border-chip-gold/50"
               }`}
             >
               {myPlayer?.is_away ? "I'm back" : "I'm away"}
@@ -428,19 +456,20 @@ export default function RoomPage() {
             <button
               onClick={handleStart}
               disabled={busy || eligiblePlayers.length < 2}
-              className="rounded bg-green-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-green-500 disabled:opacity-40"
+              className="flex items-center gap-2 rounded bg-green-600 px-4 py-2 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-green-500 disabled:pointer-events-none disabled:opacity-40 disabled:hover:translate-y-0"
             >
-              Start hand
+              {busy && <Spinner />}
+              {busy ? "Starting..." : "Start hand"}
             </button>
           )}
           {isLeader && isHandLive && (
             <button
               onClick={() => handleTogglePause(!gameState?.is_paused)}
               disabled={busy}
-              className={`rounded border px-3 py-2 text-xs font-semibold transition disabled:opacity-40 ${
+              className={`rounded border px-3 py-2 text-xs font-semibold transition hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 ${
                 gameState?.is_paused
-                  ? "border-yellow-400 bg-yellow-400 text-black"
-                  : "border-white/15 bg-zinc-800 text-white hover:border-yellow-400/50"
+                  ? "border-chip-gold bg-chip-gold text-felt-dark"
+                  : "border-white/15 bg-zinc-800 text-white hover:border-chip-gold/50"
               }`}
             >
               {gameState?.is_paused ? "Resume game" : "Pause game"}
@@ -449,10 +478,10 @@ export default function RoomPage() {
           {isLeader && transferTargets.length > 0 && (
             <button
               onClick={() => setShowTransfer((v) => !v)}
-              className={`rounded border px-3 py-2 text-xs font-semibold transition ${
+              className={`rounded border px-3 py-2 text-xs font-semibold transition hover:-translate-y-0.5 ${
                 showTransfer
-                  ? "border-yellow-400 bg-yellow-400 text-black"
-                  : "border-white/15 bg-zinc-800 text-white hover:border-yellow-400/50"
+                  ? "border-chip-gold bg-chip-gold text-felt-dark"
+                  : "border-white/15 bg-zinc-800 text-white hover:border-chip-gold/50"
               }`}
             >
               Transfer leadership
@@ -461,7 +490,7 @@ export default function RoomPage() {
           {isLeader && kickTargets.length > 0 && (
             <button
               onClick={() => setShowKick((v) => !v)}
-              className={`rounded border px-3 py-2 text-xs font-semibold transition ${
+              className={`rounded border px-3 py-2 text-xs font-semibold transition hover:-translate-y-0.5 ${
                 showKick
                   ? "border-chip-red bg-chip-red text-white"
                   : "border-white/15 bg-zinc-800 text-white hover:border-chip-red/50"
@@ -556,9 +585,10 @@ export default function RoomPage() {
                 handleRebuy(amount);
               }}
               disabled={busy}
-              className="rounded bg-chip-gold px-4 py-2 text-xs font-semibold text-felt-dark disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded bg-chip-gold px-4 py-2 text-xs font-semibold text-felt-dark transition hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 disabled:hover:translate-y-0"
             >
-              Buy back in
+              {busy && <Spinner />}
+              {busy ? "Buying in..." : "Buy back in"}
             </button>
           </div>
         </div>
@@ -568,7 +598,7 @@ export default function RoomPage() {
         <div className="mx-auto mt-6 flex w-full max-w-sm flex-col items-center gap-2 rounded-lg border border-black/50 bg-zinc-900 p-4">
           <button
             onClick={() => signInWithGoogle()}
-            className="rounded bg-white px-6 py-3 text-sm font-semibold text-felt-dark shadow"
+            className="rounded bg-white px-6 py-3 text-sm font-semibold text-felt-dark shadow transition hover:-translate-y-0.5 hover:shadow-md"
           >
             Sign in with Google
           </button>
@@ -587,9 +617,10 @@ export default function RoomPage() {
           <button
             onClick={handleJoin}
             disabled={busy || !displayName}
-            className="rounded bg-chip-blue px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
+            className="flex items-center justify-center gap-2 rounded bg-chip-gold px-3 py-2 text-sm font-semibold text-felt-dark transition hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-40 disabled:hover:translate-y-0"
           >
-            Take a seat
+            {busy && <Spinner />}
+            {busy ? "Joining..." : "Take a seat"}
           </button>
         </div>
       )}

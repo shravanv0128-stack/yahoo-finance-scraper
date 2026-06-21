@@ -74,14 +74,14 @@ export function DrawSwapControls({ holeCards, communityCards, disabled, onSwap }
         <button
           disabled={disabled}
           onClick={() => onSwap([])}
-          className="rounded bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
+          className="rounded bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:brightness-110 disabled:pointer-events-none disabled:opacity-40 disabled:hover:translate-y-0"
         >
           Stand pat
         </button>
         <button
           disabled={disabled || selected.size === 0}
           onClick={() => onSwap(Array.from(selected))}
-          className="rounded bg-chip-gold px-4 py-2 text-sm font-semibold text-felt-dark transition hover:brightness-110 disabled:opacity-40"
+          className="rounded bg-chip-gold px-4 py-2 text-sm font-semibold text-felt-dark transition hover:-translate-y-0.5 hover:brightness-110 disabled:pointer-events-none disabled:opacity-40 disabled:hover:translate-y-0"
         >
           Swap selected
         </button>

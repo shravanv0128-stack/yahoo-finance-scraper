@@ -18,14 +18,14 @@ export function ShowMuckPrompt({
         <button
           disabled={disabled}
           onClick={() => onChoose("muck")}
-          className="rounded bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
+          className="rounded bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:brightness-110 disabled:pointer-events-none disabled:opacity-40 disabled:hover:translate-y-0"
         >
           Keep mucked
         </button>
         <button
           disabled={disabled}
           onClick={() => onChoose("show")}
-          className="rounded bg-chip-gold px-4 py-2 text-sm font-semibold text-felt-dark transition hover:brightness-110 disabled:opacity-40"
+          className="rounded bg-chip-gold px-4 py-2 text-sm font-semibold text-felt-dark transition hover:-translate-y-0.5 hover:brightness-110 disabled:pointer-events-none disabled:opacity-40 disabled:hover:translate-y-0"
         >
           Show cards
         </button>
