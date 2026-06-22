@@ -120,8 +120,8 @@ export function ShowdownSummary({
   if (boards.length === 0 && shown.length === 0) return null;
 
   return (
-    <div className="mx-auto flex max-h-full w-full max-w-5xl flex-col gap-3 overflow-y-auto rounded-lg border border-black/50 bg-zinc-900 p-8">
-      <h2 className="mb-2 text-center text-xl font-semibold uppercase tracking-wide text-chip-gold">
+    <div className="mx-auto flex max-h-full w-full max-w-5xl flex-col gap-3 overflow-y-auto rounded-2xl border border-chip-gold/25 bg-gradient-to-b from-zinc-900/95 to-zinc-950/95 p-8 shadow-glass backdrop-blur-sm">
+      <h2 className="mb-2 text-center text-xl font-black uppercase tracking-widest text-chip-gold text-glow-gold">
         {result?.ranItTwice ? "Hand Results · Run it twice" : "Hand Results"}
       </h2>
 

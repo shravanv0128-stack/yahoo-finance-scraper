@@ -4,12 +4,17 @@
 
 html,
 body {
-  background-color: #020503;
+  background-color: #0a0d0b;
   background-image:
-    radial-gradient(ellipse 70% 50% at 50% 35%, rgba(57, 255, 140, 0.07), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 15% 85%, rgba(57, 255, 140, 0.05), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 85% 85%, rgba(57, 255, 140, 0.05), transparent 60%);
-  color: #eafff1;
+    radial-gradient(ellipse 120% 70% at 50% -10%, rgba(28, 107, 70, 0.18), transparent 55%),
+    radial-gradient(ellipse 80% 60% at 0% 100%, rgba(28, 107, 70, 0.10), transparent 50%),
+    radial-gradient(ellipse 80% 60% at 100% 100%, rgba(28, 107, 70, 0.10), transparent 50%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px,
+      transparent 1px, transparent 28px
+    );
+  color: #f0f0ee;
 }
 
 * {
@@ -29,20 +34,87 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 9999px;
-  background: #39ff8c;
+  background: radial-gradient(circle at 35% 35%, #f9e07a, #f3c34d);
   cursor: pointer;
-  box-shadow: 0 0 6px rgba(57, 255, 140, 0.9);
+  box-shadow: 0 0 8px rgba(243, 195, 77, 0.7), 0 2px 4px rgba(0,0,0,0.5);
+  border: 2px solid rgba(255,255,255,0.2);
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 9999px;
-  background: #39ff8c;
+  background: radial-gradient(circle at 35% 35%, #f9e07a, #f3c34d);
   cursor: pointer;
-  border: none;
-  box-shadow: 0 0 6px rgba(57, 255, 140, 0.9);
+  border: 2px solid rgba(255,255,255,0.2);
+  box-shadow: 0 0 8px rgba(243, 195, 77, 0.7), 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Slim, dark, felt-themed scrollbars for chat/showdown/ledger panels,
+   purely cosmetic (WebKit + Firefox), so scroll areas match the dark chrome
+   instead of showing the OS default light scrollbar. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(243, 195, 77, 0.35) rgba(0, 0, 0, 0.3);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(243, 195, 77, 0.35);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(243, 195, 77, 0.55);
+}
+
+/* Subtle repeating-diamond felt texture */
+.felt-texture {
+  background-image:
+    radial-gradient(ellipse 90% 70% at 50% 40%, rgba(42, 140, 92, 0.25) 0%, transparent 65%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.018) 0px, rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 12px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.04) 0px, rgba(0, 0, 0, 0.04) 1px, transparent 1px, transparent 12px);
+}
+
+/* Card-back pattern */
+.card-back-pattern {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.09) 0px, rgba(255, 255, 255, 0.09) 1.5px, transparent 1.5px, transparent 9px),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.09) 0px, rgba(255, 255, 255, 0.09) 1.5px, transparent 1.5px, transparent 9px);
+}
+
+/* Suit decoration — scattered large suit glyphs in the page background */
+.suit-bg::before {
+  content: "♠  ♥  ♣  ♦";
+  position: fixed;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 2.5rem;
+  letter-spacing: 2rem;
+  color: rgba(243, 195, 77, 0.06);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 0;
+}
+
+/* Glowing gold text shimmer */
+@keyframes gold-shimmer {
+  0%, 100% { text-shadow: 0 0 20px rgba(243,195,77,0.4), 0 0 40px rgba(243,195,77,0.15); }
+  50% { text-shadow: 0 0 30px rgba(243,195,77,0.65), 0 0 60px rgba(243,195,77,0.25); }
+}
+.text-glow-gold {
+  animation: gold-shimmer 3s ease-in-out infinite;
 }

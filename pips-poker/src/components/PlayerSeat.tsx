@@ -72,10 +72,14 @@ export function PlayerSeat({
     <div
       className={`flex flex-col items-center gap-3 rounded-2xl transition-all duration-300 ${
         folded || busted ? "opacity-50" : ""
-      } ${isActingSeat ? "bg-yellow-400/10 px-3 py-3 ring-2 ring-yellow-300 shadow-[0_0_24px_6px_rgba(250,204,21,0.45)]" : ""}`}
+      } ${
+        isActingSeat
+          ? "animate-pulseglow bg-yellow-400/10 px-3 py-3 ring-2 ring-yellow-300 shadow-[0_0_28px_8px_rgba(250,204,21,0.5),0_0_55px_18px_rgba(250,204,21,0.18)]"
+          : ""
+      }`}
     >
       {isActingSeat && (
-        <div className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_10px_2px_rgba(250,204,21,0.6)]">
+        <div className="rounded-full bg-gradient-to-b from-yellow-300 to-yellow-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_12px_3px_rgba(250,204,21,0.65)] ring-1 ring-yellow-200/60">
           {isMe ? "Your turn" : "Acting"}
         </div>
       )}
@@ -142,33 +146,32 @@ export function PlayerSeat({
         </div>
       )}
 
-      {/* PokerNow-style rectangular name plate: name on top, stack below,
-          with the dealer button and all-in badge pinned to its corners. */}
+      {/* PokerNow-style rectangular name plate */}
       <div className="relative p-1.5">
         {isWinner && (
-          <div className="absolute inset-0 rounded-md ring-2 ring-yellow-300 shadow-[0_0_12px_3px_rgba(250,204,21,0.6)]" />
+          <div className="absolute inset-0 rounded-xl ring-2 ring-yellow-300 shadow-[0_0_16px_4px_rgba(250,204,21,0.55)]" />
         )}
         <div
-          className={`relative flex min-w-[8rem] flex-col items-center gap-0.5 rounded-md border bg-zinc-900/95 px-4 py-2 text-center shadow-md ${
+          className={`relative flex min-w-[8rem] flex-col items-center gap-0.5 rounded-xl border px-4 py-2 text-center shadow-glass ${
             isWinner
-              ? "border-yellow-300"
+              ? "border-yellow-300 bg-gradient-to-b from-yellow-900/40 to-zinc-900/90"
               : isActingSeat
-                ? "border-yellow-400"
-                : "border-black/60"
+                ? "border-yellow-400/70 bg-gradient-to-b from-yellow-900/25 to-zinc-900/90"
+                : "border-white/8 bg-gradient-to-b from-zinc-800/90 to-zinc-900/90"
           }`}
         >
           {isDealer && (
-            <span className="absolute -left-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-black shadow">
+            <span className="absolute -left-2.5 -top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-b from-white to-gray-100 text-xs font-black text-black shadow-chip ring-2 ring-black/30">
               D
             </span>
           )}
-          <span className="px-1 text-sm font-semibold leading-tight text-white">
+          <span className="px-1 text-sm font-semibold leading-tight text-white/90">
             {displayName}
-            {isMe ? " (you)" : ""}
+            {isMe && <span className="ml-1 text-[10px] font-normal text-white/40">(you)</span>}
           </span>
-          <span className="text-sm font-bold leading-tight text-yellow-300">{chipStack}</span>
+          <span className="text-sm font-black leading-tight text-chip-gold">{chipStack}</span>
           {status === "all_in" && (
-            <span className="absolute -bottom-2.5 rounded bg-chip-red px-1.5 py-0.5 text-[10px] font-bold text-white">
+            <span className="absolute -bottom-3 rounded-full bg-gradient-to-b from-chip-red to-red-800 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-btn-fold ring-1 ring-black/40">
               ALL IN
             </span>
           )}
@@ -176,8 +179,8 @@ export function PlayerSeat({
       </div>
 
       {currentBet > 0 && (
-        <div className="flex items-center gap-1 rounded-full bg-zinc-800/95 px-2.5 py-1 text-xs font-bold text-white ring-1 ring-yellow-300/60">
-          <span className="h-2 w-2 rounded-full bg-yellow-300" />
+        <div className="flex items-center gap-1.5 rounded-full border border-chip-gold/30 bg-zinc-900/90 px-3 py-1 text-xs font-black text-chip-gold shadow-btn-allin">
+          <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-yellow-200 to-chip-gold shadow-chip ring-1 ring-black/40" />
           {currentBet}
         </div>
       )}

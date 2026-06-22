@@ -39,19 +39,20 @@ export function BettingControls({ toCall, chipStack, pot, disabled, onAction }: 
     children: React.ReactNode;
     onClick: () => void;
     disabled?: boolean;
-    tone: "green" | "blue" | "red" | "dark";
+    tone: "green" | "blue" | "red" | "dark" | "gold";
   }) {
     const toneClasses: Record<string, string> = {
-      green: "border-green-500 text-green-400 hover:bg-green-500/10",
-      blue: "border-blue-400 text-blue-300 hover:bg-blue-400/10",
-      red: "border-red-500 text-red-400 hover:bg-red-500/10",
-      dark: "border-zinc-500 text-zinc-200 hover:bg-zinc-500/10",
+      green: "bg-green-700/90 text-white hover:bg-green-600 shadow-btn-call",
+      blue: "bg-blue-700/90 text-white hover:bg-blue-600 shadow-btn-raise",
+      red: "bg-red-800/90 text-white hover:bg-red-700 shadow-btn-fold",
+      dark: "bg-zinc-700/80 text-zinc-100 hover:bg-zinc-600 shadow-[0_3px_10px_rgba(0,0,0,0.5)]",
+      gold: "bg-chip-gold text-felt-dark font-extrabold hover:brightness-110 shadow-btn-allin",
     };
     return (
       <button
         disabled={btnDisabled ?? disabled}
         onClick={onClick}
-        className={`relative min-w-[7rem] rounded-md border-2 bg-zinc-900/80 px-5 py-3 text-sm font-bold uppercase tracking-wide transition disabled:opacity-30 ${toneClasses[tone]}`}
+        className={`relative min-w-[7rem] rounded-xl px-5 py-3 text-sm font-bold uppercase tracking-wide transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 disabled:pointer-events-none disabled:opacity-30 disabled:hover:translate-y-0 ${toneClasses[tone]}`}
       >
         <span className="absolute right-1.5 top-1 text-[9px] font-semibold text-white/40">{shortcut}</span>
         {children}
@@ -78,30 +79,19 @@ export function BettingControls({ toCall, chipStack, pot, disabled, onAction }: 
           value={raiseAmount}
           disabled={disabled}
           onChange={(e) => setRaiseAmount(Number(e.target.value))}
-          className="w-20 rounded border border-white/20 bg-zinc-800 px-2 py-1.5 text-sm text-white disabled:opacity-40"
+          className="w-20 rounded-lg border border-white/15 bg-zinc-800/90 px-2 py-1.5 text-sm font-bold text-chip-gold focus:border-chip-gold/50 focus:outline-none disabled:opacity-40"
         />
         <div className="flex gap-1">
-          <button
-            disabled={disabled}
-            onClick={() => setRaiseAmount(halfPot)}
-            className="rounded bg-zinc-700 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-zinc-600 disabled:opacity-40"
-          >
-            1/2
-          </button>
-          <button
-            disabled={disabled}
-            onClick={() => setRaiseAmount(fullPot)}
-            className="rounded bg-zinc-700 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-zinc-600 disabled:opacity-40"
-          >
-            Pot
-          </button>
-          <button
-            disabled={disabled}
-            onClick={() => setRaiseAmount(maxBet)}
-            className="rounded bg-zinc-700 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-zinc-600 disabled:opacity-40"
-          >
-            Max
-          </button>
+          {[{ label: "½", val: halfPot }, { label: "Pot", val: fullPot }, { label: "Max", val: maxBet }].map((btn) => (
+            <button
+              key={btn.label}
+              disabled={disabled}
+              onClick={() => setRaiseAmount(btn.val)}
+              className="rounded-lg border border-white/10 bg-zinc-800/80 px-2.5 py-1.5 text-[11px] font-bold text-white/70 transition-all duration-150 hover:-translate-y-0.5 hover:border-chip-gold/30 hover:text-chip-gold active:translate-y-0 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+            >
+              {btn.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -126,7 +116,7 @@ export function BettingControls({ toCall, chipStack, pot, disabled, onAction }: 
         >
           {toCall === 0 ? "Bet" : "Raise"} {raiseAmount}
         </ActionButton>
-        <ActionButton shortcut="A" tone="dark" disabled={chipStack <= 0} onClick={() => onAction("all_in", 0)}>
+        <ActionButton shortcut="A" tone="gold" disabled={chipStack <= 0} onClick={() => onAction("all_in", 0)}>
           All In
         </ActionButton>
       </div>

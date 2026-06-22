@@ -21,7 +21,7 @@ export function CommunityBoard({ cards }: { cards: CardType[] }) {
   }, [cards.length]);
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 rounded-xl bg-black/25 p-2.5 shadow-[inset_0_2px_8px_rgba(0,0,0,0.5),0_0_20px_rgba(0,0,0,0.3)] ring-1 ring-white/5">
       {Array.from({ length: 5 }).map((_, i) => {
         const isNewThisReveal = i >= baseline;
         const delay = isNewThisReveal ? (i - baseline) * REVEAL_STAGGER_MS : 0;
