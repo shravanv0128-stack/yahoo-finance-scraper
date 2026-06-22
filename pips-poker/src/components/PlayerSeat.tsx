@@ -146,32 +146,53 @@ export function PlayerSeat({
         </div>
       )}
 
-      {/* PokerNow-style rectangular name plate */}
-      <div className="relative p-1.5">
+      {/* Nameplate: avatar + name/stack in a horizontal row */}
+      <div className="relative p-1">
         {isWinner && (
           <div className="absolute inset-0 rounded-xl ring-2 ring-yellow-300 shadow-[0_0_16px_4px_rgba(250,204,21,0.55)]" />
         )}
         <div
-          className={`relative flex min-w-[8rem] flex-col items-center gap-0.5 rounded-xl border px-4 py-2 text-center shadow-glass ${
+          className={`relative flex w-36 items-center gap-2 rounded-xl border px-2.5 py-2 shadow-xl backdrop-blur-sm transition-all ${
             isWinner
-              ? "border-yellow-300 bg-gradient-to-b from-yellow-900/40 to-zinc-900/90"
+              ? "border-amber-400/70 bg-zinc-900/90 ring-2 ring-amber-400/30"
               : isActingSeat
-                ? "border-yellow-400/70 bg-gradient-to-b from-yellow-900/25 to-zinc-900/90"
-                : "border-white/8 bg-gradient-to-b from-zinc-800/90 to-zinc-900/90"
-          }`}
+                ? "border-amber-400/60 bg-zinc-900/90 ring-2 ring-amber-400/25"
+                : isMe
+                  ? "border-amber-400/40 bg-zinc-900/90"
+                  : "border-white/10 bg-zinc-900/90"
+          } ${folded || busted ? "" : ""}`}
         >
           {isDealer && (
-            <span className="absolute -left-2.5 -top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-b from-white to-gray-100 text-xs font-black text-black shadow-chip ring-2 ring-black/30">
+            <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] font-black text-zinc-900 shadow-md ring-2 ring-zinc-800">
               D
             </span>
           )}
-          <span className="px-1 text-sm font-semibold leading-tight text-white/90">
-            {displayName}
-            {isMe && <span className="ml-1 text-[10px] font-normal text-white/40">(you)</span>}
-          </span>
-          <span className="text-sm font-black leading-tight text-chip-gold">{chipStack}</span>
+
+          {/* Avatar circle with initial */}
+          <div
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-inner ${
+              isMe
+                ? "bg-gradient-to-br from-amber-400 to-amber-600"
+                : "bg-gradient-to-br from-emerald-500 to-emerald-700"
+            }`}
+          >
+            {displayName.charAt(0).toUpperCase()}
+          </div>
+
+          {/* Name + stack */}
+          <div className="min-w-0 flex-1 text-left">
+            <p className="truncate text-sm font-semibold leading-tight text-zinc-100">
+              {displayName}
+              {isMe && <span className="ml-1 text-[10px] font-normal text-white/40">(you)</span>}
+            </p>
+            <p className="flex items-center gap-1 text-xs font-bold text-emerald-400">
+              <span className="inline-block h-2 w-2 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 ring-1 ring-amber-700/60" />
+              {chipStack}
+            </p>
+          </div>
+
           {status === "all_in" && (
-            <span className="absolute -bottom-3 rounded-full bg-gradient-to-b from-chip-red to-red-800 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-btn-fold ring-1 ring-black/40">
+            <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-b from-chip-red to-red-800 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-btn-fold ring-1 ring-black/40">
               ALL IN
             </span>
           )}
@@ -179,9 +200,13 @@ export function PlayerSeat({
       </div>
 
       {currentBet > 0 && (
-        <div className="flex items-center gap-1.5 rounded-full border border-chip-gold/30 bg-zinc-900/90 px-3 py-1 text-xs font-black text-chip-gold shadow-btn-allin">
-          <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-yellow-200 to-chip-gold shadow-chip ring-1 ring-black/40" />
-          {currentBet}
+        <div className="mt-1 flex items-center justify-center gap-1.5">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-rose-700 text-[9px] font-black text-white shadow-md ring-2 ring-white/20">
+            $
+          </span>
+          <span className="rounded-full bg-black/60 px-2 py-0.5 text-xs font-bold text-amber-300 shadow">
+            {currentBet}
+          </span>
         </div>
       )}
 

@@ -79,20 +79,21 @@ export function Table({
 
   return (
     <div className="relative mx-auto h-full max-h-full w-full max-w-7xl" style={{ aspectRatio: "16/10" }}>
-      {/* PokerNow-style felt with a layered wooden/leather rail bevel: an
-          outer dark rail with an inset highlight, then the green felt oval
-          with a soft radial sheen + subtle diamond texture and a darker
-          vignette toward the rim for depth. */}
-      <div className="absolute inset-[2%] rounded-[50%] bg-gradient-to-br from-zinc-800 via-zinc-900 to-black shadow-rail" />
-      <div className="absolute inset-[4%] rounded-[50%] bg-zinc-950 ring-1 ring-white/5" />
-      <div
-        className="felt-texture absolute inset-[7%] rounded-[50%] shadow-table ring-2 ring-black/50"
-        style={{
-          backgroundImage:
-            "radial-gradient(ellipse 80% 65% at 50% 38%, #2a8c5c 0%, #1c6b46 45%, #123d28 100%)",
-        }}
-      />
-      <div className="absolute inset-[7%] rounded-[50%] ring-1 ring-inset ring-white/10" />
+      {/* Amber wood rail (4 nested layers, matching PokerNow's carved-rail look) */}
+      <div className="absolute inset-0 rounded-[50%] bg-gradient-to-b from-amber-900 via-amber-950 to-black shadow-[0_30px_60px_rgba(0,0,0,0.7)]">
+        <div className="h-full w-full rounded-[50%] bg-gradient-to-b from-yellow-700/80 via-amber-800 to-amber-950 p-[3%] shadow-[inset_0_2px_8px_rgba(255,255,255,0.12)]">
+          <div className="h-full w-full rounded-[50%] bg-gradient-to-b from-amber-950 to-stone-900 p-[2%] shadow-[inset_0_4px_12px_rgba(0,0,0,0.8)]">
+            {/* Felt */}
+            <div
+              className="felt-texture relative h-full w-full rounded-[50%] shadow-table ring-1 ring-black/40"
+              style={{ background: "radial-gradient(ellipse at center, #1e5e3f 0%, #10402a 55%, #0a2a1c 100%)" }}
+            >
+              {/* Subtle center decorative ring */}
+              <div className="absolute inset-[14%] rounded-[50%] border border-emerald-300/8" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Center: community cards + pot — shifted slightly above true center
           so the board doesn't crowd the bottom seat's hole cards */}

@@ -42,17 +42,17 @@ export function BettingControls({ toCall, chipStack, pot, disabled, onAction }: 
     tone: "green" | "blue" | "red" | "dark" | "gold";
   }) {
     const toneClasses: Record<string, string> = {
-      green: "bg-green-700/90 text-white hover:bg-green-600 shadow-btn-call",
-      blue: "bg-blue-700/90 text-white hover:bg-blue-600 shadow-btn-raise",
-      red: "bg-red-800/90 text-white hover:bg-red-700 shadow-btn-fold",
-      dark: "bg-zinc-700/80 text-zinc-100 hover:bg-zinc-600 shadow-[0_3px_10px_rgba(0,0,0,0.5)]",
-      gold: "bg-chip-gold text-felt-dark font-extrabold hover:brightness-110 shadow-btn-allin",
+      green: "bg-gradient-to-b from-emerald-600 to-emerald-700 text-white hover:from-emerald-500 hover:to-emerald-600 shadow-btn-call",
+      blue: "bg-gradient-to-b from-sky-600 to-sky-700 text-white hover:from-sky-500 hover:to-sky-600 shadow-btn-raise",
+      red: "bg-gradient-to-b from-rose-600 to-rose-700 text-white hover:from-rose-500 hover:to-rose-600 shadow-btn-fold",
+      dark: "bg-gradient-to-b from-zinc-600 to-zinc-700 text-white hover:from-zinc-500 hover:to-zinc-600 shadow-[0_3px_10px_rgba(0,0,0,0.5)]",
+      gold: "bg-gradient-to-b from-amber-500 to-amber-600 text-zinc-900 font-extrabold hover:from-amber-400 hover:to-amber-500 shadow-btn-allin",
     };
     return (
       <button
         disabled={btnDisabled ?? disabled}
         onClick={onClick}
-        className={`relative min-w-[7rem] rounded-xl px-5 py-3 text-sm font-bold uppercase tracking-wide transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 disabled:pointer-events-none disabled:opacity-30 disabled:hover:translate-y-0 ${toneClasses[tone]}`}
+        className={`relative min-w-[7rem] rounded-xl px-5 py-3 text-sm font-bold uppercase tracking-wide shadow-lg transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-30 disabled:hover:translate-y-0 ${toneClasses[tone]}`}
       >
         <span className="absolute right-1.5 top-1 text-[9px] font-semibold text-white/40">{shortcut}</span>
         {children}
@@ -61,7 +61,7 @@ export function BettingControls({ toCall, chipStack, pot, disabled, onAction }: 
   }
 
   return (
-    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+    <div className="flex w-full flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-900/80 p-3 shadow-2xl backdrop-blur sm:flex-row sm:items-center sm:justify-end">
       <div className="flex flex-1 items-center gap-3 sm:max-w-md">
         <input
           type="range"

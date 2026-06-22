@@ -11,20 +11,20 @@ const RED_SUITS: CardType["suit"][] = ["hearts", "diamonds"];
 
 const SIZE_CLASSES: Record<"sm" | "md" | "lg", string> = {
   sm: "h-16 w-12",
-  md: "h-28 w-20",
-  lg: "h-32 w-[5.75rem]",
+  md: "h-20 w-14",
+  lg: "h-24 w-[4.25rem]",
 };
 
-const RANK_TEXT_CLASSES: Record<"sm" | "md" | "lg", string> = {
+const RANK_CLASSES: Record<"sm" | "md" | "lg", string> = {
+  sm: "text-sm",
+  md: "text-base",
+  lg: "text-lg",
+};
+
+const SUIT_CENTER_CLASSES: Record<"sm" | "md" | "lg", string> = {
   sm: "text-xl",
-  md: "text-3xl",
-  lg: "text-4xl",
-};
-
-const SUIT_TEXT_CLASSES: Record<"sm" | "md" | "lg", string> = {
-  sm: "text-2xl",
-  md: "text-4xl",
-  lg: "text-5xl",
+  md: "text-2xl",
+  lg: "text-3xl",
 };
 
 export function Card({
@@ -38,33 +38,15 @@ export function Card({
   faceDown?: boolean;
   size?: "sm" | "md" | "lg";
   highlight?: boolean;
-  // Stagger when this card's flip-to-face-up transition kicks in, so a run
-  // of several cards revealed at once (the flop, or a run-it-twice board)
-  // flips over one at a time instead of all snapping at once.
   revealDelayMs?: number;
 }) {
   const dims = SIZE_CLASSES[size];
-  const highlightClasses = highlight
-    ? "ring-1 ring-amber-300/70 shadow-[0_0_8px_2px_rgba(251,191,36,0.35)]"
+  const highlightRing = highlight
+    ? "ring-2 ring-amber-300/80 shadow-[0_0_10px_3px_rgba(251,191,36,0.4)]"
     : "";
 
   const isRed = card ? RED_SUITS.includes(card.suit) : false;
-  // faceDown (or no card dealt yet) shows the back face; otherwise rotate
-  // the inner flip container 180deg to reveal the front face. Both faces
-  // are always rendered and layered via backface-visibility so the flip is
-  // a true 3D turn rather than a content swap.
   const showFace = !faceDown && !!card;
-
-  const cornerRankClasses: Record<"sm" | "md" | "lg", string> = {
-    sm: "text-[10px]",
-    md: "text-xs",
-    lg: "text-sm",
-  };
-  const cornerSuitClasses: Record<"sm" | "md" | "lg", string> = {
-    sm: "text-[10px]",
-    md: "text-xs",
-    lg: "text-sm",
-  };
 
   return (
     <div className={`${dims} [perspective:600px]`}>
@@ -74,38 +56,36 @@ export function Card({
         }`}
         style={{ transitionDelay: showFace ? `${revealDelayMs}ms` : "0ms" }}
       >
-        {/* Back face (card down): deep red gradient with a diamond lattice
-            pattern and a centered emblem, closer to a real card back than a
-            flat color block. */}
+        {/* Back face */}
         <div
-          className={`card-back-pattern ${highlightClasses} absolute inset-0 flex items-center justify-center rounded-md border border-black/40 bg-gradient-to-br from-red-700 via-red-800 to-red-950 shadow-md [backface-visibility:hidden]`}
+          className={`card-back-pattern ${highlightRing} absolute inset-0 flex items-center justify-center rounded-lg border border-black/40 bg-gradient-to-br from-red-700 via-red-800 to-red-950 shadow-[0_4px_12px_rgba(0,0,0,0.55)] [backface-visibility:hidden]`}
         >
           <div className="flex h-1/2 w-1/2 items-center justify-center rounded-sm border border-white/40 bg-white/5">
             <div className="h-1/3 w-1/3 rotate-45 rounded-[2px] bg-white/25" />
           </div>
         </div>
 
-        {/* Front face (card up): off-white card stock with a faint inner
-            border and small corner index in addition to the large centered
-            rank/suit, for a more authentic printed-card look. */}
+        {/* Front face — rank top-left, suit centered large, rank bottom-right inverted */}
         <div
-          className={`${highlightClasses} absolute inset-0 flex flex-col items-center justify-center rounded-md border border-gray-300 bg-gradient-to-b from-white to-gray-50 shadow-md [backface-visibility:hidden] [transform:rotateY(180deg)]`}
+          className={`${highlightRing} absolute inset-0 flex flex-col justify-between rounded-lg border border-gray-200 bg-gradient-to-b from-white to-gray-50 p-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.55)] ring-1 ring-black/10 [backface-visibility:hidden] [transform:rotateY(180deg)]`}
         >
           {card && (
             <>
-              <span
-                className={`absolute left-1 top-0.5 flex flex-col items-center leading-none font-bold ${cornerRankClasses[size]} ${isRed ? "text-chip-red" : "text-chip-black"}`}
-              >
+              {/* Top-left rank + suit */}
+              <span className={`flex flex-col items-start leading-none ${RANK_CLASSES[size]} font-bold ${isRed ? "text-rose-600" : "text-zinc-900"}`}>
                 {card.rank}
-                <span className={cornerSuitClasses[size]}>{SUIT_SYMBOLS[card.suit]}</span>
+                <span className="text-[0.7em]">{SUIT_SYMBOLS[card.suit]}</span>
               </span>
-              <span
-                className={`font-extrabold leading-none ${RANK_TEXT_CLASSES[size]} ${isRed ? "text-chip-red" : "text-chip-black"}`}
-              >
-                {card.rank}
-              </span>
-              <span className={`leading-none ${SUIT_TEXT_CLASSES[size]} ${isRed ? "text-chip-red" : "text-chip-black"}`}>
+
+              {/* Center suit — large */}
+              <span className={`self-center leading-none ${SUIT_CENTER_CLASSES[size]} ${isRed ? "text-rose-600" : "text-zinc-900"}`}>
                 {SUIT_SYMBOLS[card.suit]}
+              </span>
+
+              {/* Bottom-right rank + suit, rotated 180° */}
+              <span className={`flex flex-col items-end rotate-180 leading-none ${RANK_CLASSES[size]} font-bold ${isRed ? "text-rose-600" : "text-zinc-900"}`}>
+                {card.rank}
+                <span className="text-[0.7em]">{SUIT_SYMBOLS[card.suit]}</span>
               </span>
             </>
           )}
