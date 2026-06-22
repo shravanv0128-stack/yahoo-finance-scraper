@@ -71,10 +71,10 @@ export function Card({
         >
           {card && (
             <>
-              {/* Top-left rank + suit */}
+              {/* Top-left corner index */}
               <span className={`flex flex-col items-start leading-none ${RANK_CLASSES[size]} font-bold ${isRed ? "text-rose-600" : "text-zinc-900"}`}>
                 {card.rank}
-                <span className="text-[0.7em]">{SUIT_SYMBOLS[card.suit]}</span>
+                <span className="text-[0.75em]">{SUIT_SYMBOLS[card.suit]}</span>
               </span>
 
               {/* Center suit — large */}
@@ -82,10 +82,10 @@ export function Card({
                 {SUIT_SYMBOLS[card.suit]}
               </span>
 
-              {/* Bottom-right rank + suit, rotated 180° */}
-              <span className={`flex flex-col items-end rotate-180 leading-none ${RANK_CLASSES[size]} font-bold ${isRed ? "text-rose-600" : "text-zinc-900"}`}>
+              {/* Bottom-right corner index (small, upright — NOT rotated) */}
+              <span className={`flex flex-col items-end leading-none ${RANK_CLASSES[size]} font-bold ${isRed ? "text-rose-600" : "text-zinc-900"}`}>
                 {card.rank}
-                <span className="text-[0.7em]">{SUIT_SYMBOLS[card.suit]}</span>
+                <span className="text-[0.75em]">{SUIT_SYMBOLS[card.suit]}</span>
               </span>
             </>
           )}

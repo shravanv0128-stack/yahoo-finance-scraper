@@ -95,10 +95,12 @@ export function Table({
         </div>
       </div>
 
-      {/* Center: community cards + pot — shifted slightly above true center
-          so the board doesn't crowd the bottom seat's hole cards */}
-      <div className="absolute left-1/2 top-[46%] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
+      {/* Pot sits above the community board so it's never obscured by seats */}
+      <div className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2">
         <PotDisplay pot={pot} currentBet={currentBet} pots={pots} />
+      </div>
+      {/* Community board centered slightly below mid-table */}
+      <div className="absolute left-1/2 top-[52%] -translate-x-1/2 -translate-y-1/2">
         <CommunityBoard cards={communityCards} />
       </div>
 

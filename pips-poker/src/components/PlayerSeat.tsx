@@ -73,13 +73,19 @@ export function PlayerSeat({
       className={`flex flex-col items-center gap-3 rounded-2xl transition-all duration-300 ${
         folded || busted ? "opacity-50" : ""
       } ${
-        isActingSeat
-          ? "animate-pulseglow bg-yellow-400/8 px-2 py-2 ring-2 ring-yellow-300 shadow-[0_0_20px_6px_rgba(250,204,21,0.45),0_0_40px_12px_rgba(250,204,21,0.15)]"
+        isActingSeat && isMe
+          ? "animate-pulseglow bg-amber-400/10 px-2 py-2 ring-2 ring-amber-300 shadow-[0_0_24px_8px_rgba(251,191,36,0.5),0_0_48px_16px_rgba(251,191,36,0.18)]"
+          : isActingSeat
+          ? "animate-pulseglow bg-white/5 px-2 py-2 ring-2 ring-white/60 shadow-[0_0_20px_6px_rgba(255,255,255,0.25),0_0_40px_12px_rgba(255,255,255,0.08)]"
           : ""
       }`}
     >
       {isActingSeat && (
-        <div className="rounded-full bg-gradient-to-b from-yellow-300 to-yellow-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_12px_3px_rgba(250,204,21,0.65)] ring-1 ring-yellow-200/60">
+        <div className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider shadow-lg ring-1 ${
+          isMe
+            ? "bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900 shadow-[0_0_12px_3px_rgba(251,191,36,0.6)] ring-amber-200/60"
+            : "bg-gradient-to-b from-white/90 to-zinc-200 text-zinc-900 shadow-[0_0_10px_2px_rgba(255,255,255,0.3)] ring-white/40"
+        }`}>
           {isMe ? "Your turn" : "Acting"}
         </div>
       )}
@@ -155,11 +161,13 @@ export function PlayerSeat({
           className={`relative flex w-36 items-center gap-2 rounded-xl border px-2.5 py-2 shadow-xl backdrop-blur-sm transition-all ${
             isWinner
               ? "border-amber-400/70 bg-zinc-900/90 ring-2 ring-amber-400/30"
-              : isActingSeat
+              : isActingSeat && isMe
                 ? "border-amber-400/60 bg-zinc-900/90 ring-2 ring-amber-400/25"
-                : isMe
-                  ? "border-amber-400/40 bg-zinc-900/90"
-                  : "border-white/10 bg-zinc-900/90"
+                : isActingSeat
+                  ? "border-white/40 bg-zinc-900/90 ring-2 ring-white/20"
+                  : isMe
+                    ? "border-amber-400/30 bg-zinc-900/90"
+                    : "border-white/10 bg-zinc-900/90"
           } ${folded || busted ? "" : ""}`}
         >
           {isDealer && (
