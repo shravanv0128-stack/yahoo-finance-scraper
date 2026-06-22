@@ -44,17 +44,13 @@ export interface TableProps {
 function ellipsePosition(index: number, total: number): { left: string; top: string } {
   const angleStep = (2 * Math.PI) / total;
   const angle = Math.PI / 2 + index * angleStep; // start at bottom, go clockwise
-  const rx = 44; // % of width
-  const ry = 30; // % of height
+  const rx = 43; // % of width
+  const ry = 28; // % of height — slightly tighter vertically so seats stay inside the oval
   const x = 50 + rx * Math.cos(angle);
   let y = 50 + ry * Math.sin(angle);
-  // The bottom seat (always the viewer's own) grows tallest - turn badge,
-  // bigger cards, timer bar, hand ribbon, name plate - and since seats are
-  // centered on this point, that height grows upward into the community
-  // cards too. Push it down a bit further than the ellipse alone would so
-  // it never overlaps the board, even mid-hand with the "your turn" badge
-  // up - but not so far it runs into the bottom edge of the felt/page.
-  if (index === 0) y += 4;
+  // Push the bottom seat (viewer's own) further down so the community board
+  // never overlaps hole cards even when the seat is tallest (lg cards + badge).
+  if (index === 0) y += 8;
   return { left: `${x}%`, top: `${y}%` };
 }
 
@@ -98,8 +94,9 @@ export function Table({
       />
       <div className="absolute inset-[7%] rounded-[50%] ring-1 ring-inset ring-white/10" />
 
-      {/* Center: community cards + pot */}
-      <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
+      {/* Center: community cards + pot — shifted slightly above true center
+          so the board doesn't crowd the bottom seat's hole cards */}
+      <div className="absolute left-1/2 top-[46%] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
         <PotDisplay pot={pot} currentBet={currentBet} pots={pots} />
         <CommunityBoard cards={communityCards} />
       </div>

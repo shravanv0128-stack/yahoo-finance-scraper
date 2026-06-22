@@ -74,7 +74,7 @@ export function PlayerSeat({
         folded || busted ? "opacity-50" : ""
       } ${
         isActingSeat
-          ? "animate-pulseglow bg-yellow-400/10 px-3 py-3 ring-2 ring-yellow-300 shadow-[0_0_28px_8px_rgba(250,204,21,0.5),0_0_55px_18px_rgba(250,204,21,0.18)]"
+          ? "animate-pulseglow bg-yellow-400/8 px-2 py-2 ring-2 ring-yellow-300 shadow-[0_0_20px_6px_rgba(250,204,21,0.45),0_0_40px_12px_rgba(250,204,21,0.15)]"
           : ""
       }`}
     >
@@ -109,7 +109,7 @@ export function PlayerSeat({
               key={i}
               card={cardsToShow?.[i] ?? undefined}
               faceDown={!showFaceUp || !cardsToShow?.[i]}
-              size={isWinner || isActingSeat ? "lg" : "md"}
+              size={isWinner || (isActingSeat && isMe) ? "lg" : "md"}
               highlight={isActingSeat || isWinner}
             />
           ))}
