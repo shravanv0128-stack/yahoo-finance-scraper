@@ -24,7 +24,7 @@ export function LedgerPanel({
   const [amounts, setAmounts] = useState<Record<string, number>>({});
 
   return (
-    <div className="mx-auto mt-4 w-full max-w-2xl rounded-lg border border-black/50 bg-zinc-900 p-4">
+    <div className="mx-auto mt-4 w-full max-w-2xl rounded-lg border border-chip-gold/20 bg-gradient-to-b from-zinc-900 to-zinc-950 p-4 shadow-rail">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-chip-gold">Ledger</h2>
       <div className="flex flex-col gap-2">
         {players.map((p) => {
@@ -53,14 +53,14 @@ export function LedgerPanel({
                   <button
                     disabled={disabled}
                     onClick={() => onAdjust(p.id, amount)}
-                    className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-40"
+                    className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white transition duration-150 hover:-translate-y-0.5 hover:bg-emerald-500 active:translate-y-0 active:scale-95 disabled:pointer-events-none disabled:opacity-40 disabled:hover:translate-y-0"
                   >
                     + Add
                   </button>
                   <button
                     disabled={disabled}
                     onClick={() => onAdjust(p.id, -amount)}
-                    className="rounded bg-chip-red px-2 py-1 text-xs font-semibold text-white disabled:opacity-40"
+                    className="rounded bg-chip-red px-2 py-1 text-xs font-semibold text-white transition duration-150 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-95 disabled:pointer-events-none disabled:opacity-40 disabled:hover:translate-y-0"
                   >
                     − Subtract
                   </button>

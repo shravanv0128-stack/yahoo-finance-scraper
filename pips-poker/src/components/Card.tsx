@@ -55,6 +55,17 @@ export function Card({
   // a true 3D turn rather than a content swap.
   const showFace = !faceDown && !!card;
 
+  const cornerRankClasses: Record<"sm" | "md" | "lg", string> = {
+    sm: "text-[10px]",
+    md: "text-xs",
+    lg: "text-sm",
+  };
+  const cornerSuitClasses: Record<"sm" | "md" | "lg", string> = {
+    sm: "text-[10px]",
+    md: "text-xs",
+    lg: "text-sm",
+  };
+
   return (
     <div className={`${dims} [perspective:600px]`}>
       <div
@@ -63,19 +74,31 @@ export function Card({
         }`}
         style={{ transitionDelay: showFace ? `${revealDelayMs}ms` : "0ms" }}
       >
-        {/* Back face (card down) */}
+        {/* Back face (card down): deep red gradient with a diamond lattice
+            pattern and a centered emblem, closer to a real card back than a
+            flat color block. */}
         <div
-          className={`${highlightClasses} absolute inset-0 flex items-center justify-center rounded-md border border-black/30 bg-gradient-to-br from-red-800 to-red-950 shadow-md [backface-visibility:hidden]`}
+          className={`card-back-pattern ${highlightClasses} absolute inset-0 flex items-center justify-center rounded-md border border-black/40 bg-gradient-to-br from-red-700 via-red-800 to-red-950 shadow-md [backface-visibility:hidden]`}
         >
-          <div className="h-1/2 w-1/2 rounded-sm border border-white/30" />
+          <div className="flex h-1/2 w-1/2 items-center justify-center rounded-sm border border-white/40 bg-white/5">
+            <div className="h-1/3 w-1/3 rotate-45 rounded-[2px] bg-white/25" />
+          </div>
         </div>
 
-        {/* Front face (card up) */}
+        {/* Front face (card up): off-white card stock with a faint inner
+            border and small corner index in addition to the large centered
+            rank/suit, for a more authentic printed-card look. */}
         <div
-          className={`${highlightClasses} absolute inset-0 flex flex-col items-center justify-center rounded-md border border-gray-300 bg-white shadow-md [backface-visibility:hidden] [transform:rotateY(180deg)]`}
+          className={`${highlightClasses} absolute inset-0 flex flex-col items-center justify-center rounded-md border border-gray-300 bg-gradient-to-b from-white to-gray-50 shadow-md [backface-visibility:hidden] [transform:rotateY(180deg)]`}
         >
           {card && (
             <>
+              <span
+                className={`absolute left-1 top-0.5 flex flex-col items-center leading-none font-bold ${cornerRankClasses[size]} ${isRed ? "text-chip-red" : "text-chip-black"}`}
+              >
+                {card.rank}
+                <span className={cornerSuitClasses[size]}>{SUIT_SYMBOLS[card.suit]}</span>
+              </span>
               <span
                 className={`font-extrabold leading-none ${RANK_TEXT_CLASSES[size]} ${isRed ? "text-chip-red" : "text-chip-black"}`}
               >

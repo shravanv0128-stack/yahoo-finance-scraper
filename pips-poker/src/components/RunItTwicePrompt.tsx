@@ -14,7 +14,7 @@ export function RunItTwicePrompt({
   onChoose: (runTwice: boolean) => void;
 }) {
   return (
-    <div className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-black/50 bg-zinc-900 px-4 py-3 text-center shadow-xl">
+    <div className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-chip-gold/20 bg-gradient-to-b from-zinc-900 to-zinc-950 px-4 py-3 text-center shadow-rail">
       <p className="text-xs text-white/80">
         Everyone's all-in. Run it twice to split the pot 50/50 across two boards, needs everyone to
         agree; one "run it once" vote settles it now.

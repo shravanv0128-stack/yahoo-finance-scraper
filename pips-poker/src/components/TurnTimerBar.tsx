@@ -37,8 +37,8 @@ export function TurnTimerBar({
   if (paused) {
     return (
       <div className="flex items-center gap-1.5">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/50">
-          <div className="h-full rounded-full bg-yellow-400/70" style={{ width: "100%" }} />
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/50 shadow-inner">
+          <div className="h-full rounded-full bg-gradient-to-r from-yellow-500/70 to-yellow-300/70" style={{ width: "100%" }} />
         </div>
         <span className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wide text-yellow-300">
           Paused
@@ -51,10 +51,12 @@ export function TurnTimerBar({
   const isLow = (secondsLeft ?? 0) <= 10;
 
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/50">
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/50 shadow-inner">
       <div
         className={`h-full rounded-full transition-[width] duration-100 ease-linear ${
-          isLow ? "bg-chip-red" : "bg-chip-blue shadow-[0_0_6px_2px_rgba(56,189,248,0.8)]"
+          isLow
+            ? "bg-gradient-to-r from-red-600 to-chip-red shadow-[0_0_6px_2px_rgba(224,71,62,0.7)]"
+            : "bg-gradient-to-r from-sky-500 to-chip-blue shadow-[0_0_6px_2px_rgba(56,189,248,0.8)]"
         }`}
         style={{ width: `${pct}%` }}
       />

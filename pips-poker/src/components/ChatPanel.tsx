@@ -49,7 +49,7 @@ export function ChatPanel({ messages, myUserId, disabled, onSend }: ChatPanelPro
   };
 
   return (
-    <div className="flex h-40 w-full flex-col rounded-lg border border-black/40 bg-zinc-900 sm:h-auto sm:w-64">
+    <div className="flex h-40 w-full flex-col rounded-lg border border-black/40 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-inner sm:h-auto sm:w-64">
       <div ref={listRef} className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
         {messages.length === 0 && <p className="text-xs text-white/30">No messages yet.</p>}
         {messages.map((m) => (
@@ -72,12 +72,12 @@ export function ChatPanel({ messages, myUserId, disabled, onSend }: ChatPanelPro
           onKeyDown={(e) => {
             if (e.key === "Enter") send();
           }}
-          className="min-w-0 flex-1 rounded border border-white/20 bg-zinc-800 px-2 py-1.5 text-xs text-white placeholder:text-white/30 disabled:opacity-40"
+          className="min-w-0 flex-1 rounded border border-white/20 bg-zinc-800 px-2 py-1.5 text-xs text-white placeholder:text-white/30 transition focus:border-chip-gold/50 focus:outline-none disabled:opacity-40"
         />
         <button
           disabled={disabled || !draft.trim()}
           onClick={send}
-          className="rounded bg-yellow-400 px-3 py-1.5 text-xs font-bold text-black disabled:opacity-40"
+          className="rounded bg-gradient-to-b from-yellow-300 to-chip-gold px-3 py-1.5 text-xs font-bold text-black transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 disabled:pointer-events-none disabled:opacity-40 disabled:hover:translate-y-0"
         >
           Send
         </button>

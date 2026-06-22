@@ -407,10 +407,10 @@ export default function RoomPage() {
   const kickTargets = activePlayers.filter((p) => p.user_id !== leaderId);
 
   return (
-    <main className="flex h-screen flex-col overflow-y-auto bg-felt-dark">
-      <header className="flex items-center justify-between border-b border-black/40 bg-zinc-950 px-4 py-3 text-white">
+    <main className="flex h-screen flex-col overflow-y-auto bg-gradient-to-b from-felt-dark to-black">
+      <header className="flex items-center justify-between border-b border-black/40 bg-gradient-to-b from-zinc-900 to-zinc-950 px-4 py-3 text-white shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
         <div className="flex items-center gap-6">
-          <span className="text-xl font-black tracking-wider text-white">
+          <span className="text-xl font-black tracking-wider text-chip-gold drop-shadow-[0_0_10px_rgba(243,195,77,0.4)]">
             PIPS
           </span>
           <div className="flex items-center gap-5 text-[11px]">
@@ -694,7 +694,7 @@ export default function RoomPage() {
       )}
 
       {amSeated && (
-        <div className="flex w-full flex-shrink-0 flex-col items-stretch gap-3 border-t border-black/40 bg-zinc-950 px-4 py-3 sm:flex-row">
+        <div className="flex w-full flex-shrink-0 flex-col items-stretch gap-3 border-t border-black/40 bg-gradient-to-b from-zinc-900 to-zinc-950 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.4)] sm:flex-row">
           <ChatPanel messages={chatMessages} myUserId={myUserId} disabled={busy} onSend={handleSendChat} />
 
           <div className="flex flex-1 items-stretch">

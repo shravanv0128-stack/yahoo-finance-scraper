@@ -5,7 +5,7 @@
 export function Spinner({ className = "" }: { className?: string }) {
   return (
     <svg
-      className={`h-3.5 w-3.5 animate-spin ${className}`}
+      className={`h-3.5 w-3.5 animate-spin drop-shadow-[0_0_3px_rgba(243,195,77,0.5)] ${className}`}
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"

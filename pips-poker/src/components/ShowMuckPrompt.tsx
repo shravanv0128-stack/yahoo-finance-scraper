@@ -10,7 +10,7 @@ export function ShowMuckPrompt({
   onChoose: (decision: ShowDecision) => void;
 }) {
   return (
-    <div className="flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-black/50 bg-zinc-900 px-4 py-3 shadow-xl">
+    <div className="flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-chip-gold/20 bg-gradient-to-b from-zinc-900 to-zinc-950 px-4 py-3 shadow-rail">
       <p className="text-center text-sm font-semibold text-white">
         Want to show your cards, or keep them mucked?
       </p>

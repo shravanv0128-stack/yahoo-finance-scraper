@@ -83,10 +83,20 @@ export function Table({
 
   return (
     <div className="relative mx-auto h-full max-h-full w-full max-w-7xl" style={{ aspectRatio: "16/10" }}>
-      {/* Flat PokerNow-style felt: a plain dark bezel ring around a solid
-          green oval, no glow/bloom. */}
-      <div className="absolute inset-[4%] rounded-[50%] bg-zinc-900" />
-      <div className="absolute inset-[7%] rounded-[50%] bg-felt shadow-table ring-2 ring-black/40" />
+      {/* PokerNow-style felt with a layered wooden/leather rail bevel: an
+          outer dark rail with an inset highlight, then the green felt oval
+          with a soft radial sheen + subtle diamond texture and a darker
+          vignette toward the rim for depth. */}
+      <div className="absolute inset-[2%] rounded-[50%] bg-gradient-to-br from-zinc-800 via-zinc-900 to-black shadow-rail" />
+      <div className="absolute inset-[4%] rounded-[50%] bg-zinc-950 ring-1 ring-white/5" />
+      <div
+        className="felt-texture absolute inset-[7%] rounded-[50%] shadow-table ring-2 ring-black/50"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 80% 65% at 50% 38%, #2a8c5c 0%, #1c6b46 45%, #123d28 100%)",
+        }}
+      />
+      <div className="absolute inset-[7%] rounded-[50%] ring-1 ring-inset ring-white/10" />
 
       {/* Center: community cards + pot */}
       <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">

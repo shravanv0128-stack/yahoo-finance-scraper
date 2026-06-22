@@ -32,7 +32,7 @@ export function DrawSwapControls({ holeCards, communityCards, disabled, onSwap }
   const handLabel = best ? handCategoryLabel(best) : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-3 rounded-lg border border-black/50 bg-zinc-900 p-5 shadow-xl">
+    <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-3 rounded-lg border border-chip-gold/20 bg-gradient-to-b from-zinc-900 to-zinc-950 p-5 shadow-rail">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-yellow-300">Draw / Swap</h2>
 
       {communityCards.length > 0 && (
