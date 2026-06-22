@@ -126,13 +126,12 @@ export function useRoomRealtime(roomId: string) {
     refresh();
     const interval = setInterval(refresh, POLL_MS);
 
+    // game_state is not subscribed here on purpose: it holds the secret deck
+    // column and is kept out of the Realtime publication (see schema.sql), so
+    // it's never broadcast. Its changes are picked up by the poll plus the
+    // hand_players/actions events below, which fire on every betting action.
     const channel = supabase
       .channel(`room-${roomId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "game_state", filter: `room_id=eq.${roomId}` },
-        refresh
-      )
       .on("postgres_changes", { event: "*", schema: "public", table: "hand_players" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "actions" }, refresh)
       .on(

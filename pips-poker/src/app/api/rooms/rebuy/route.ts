@@ -45,7 +45,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "You still have chips - no rebuy needed" }, { status: 409 });
     }
 
-    const rebuyAmount = body.amount ?? room.starting_stack ?? 1000;
+    // A rebuy is always capped at one starting stack so a busted player can't
+    // self-credit an arbitrary amount by passing a huge `amount`. Anything
+    // bigger than the table's configured buy-in is clamped down to it.
+    const startingStack = room.starting_stack ?? 1000;
+    const requested = body.amount ?? startingStack;
+    const rebuyAmount = Math.min(requested, startingStack);
     const { data: updated, error: updateError } = await supabase
       .from("players")
       .update({

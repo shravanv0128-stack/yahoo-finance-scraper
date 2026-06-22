@@ -179,19 +179,40 @@ alter table game_state enable row level security;
 alter table actions enable row level security;
 alter table chat_messages enable row level security;
 
--- Public, read-only metadata for anyone signed in.
-create policy "rooms readable by authenticated users" on rooms for select using (auth.role() = 'authenticated');
+-- Rooms are only visible to users who actually hold a seat in them. This
+-- stops any signed-in client from enumerating every room's join `code` via
+-- the REST API and walking into private tables uninvited. The join-by-code
+-- flow still works because /api/rooms/join looks the room up server-side
+-- with the service-role key (which bypasses RLS), not from the browser.
+create policy "rooms readable by seated members" on rooms for select using (
+  exists (select 1 from players p where p.room_id = rooms.id and p.user_id = auth.uid())
+);
+
+-- These tables carry no per-user secrets (stacks, public hand state, the
+-- action log, public chat), so they stay readable by any authenticated user
+-- - this is what powers the Realtime subscriptions in useRoomRealtime.ts.
 create policy "players readable by authenticated users" on players for select using (auth.role() = 'authenticated');
 create policy "hands readable by authenticated users" on hands for select using (auth.role() = 'authenticated');
 create policy "hand_players readable by authenticated users" on hand_players for select using (auth.role() = 'authenticated');
-create policy "game_state readable by authenticated users" on game_state for select using (auth.role() = 'authenticated');
 create policy "actions readable by authenticated users" on actions for select using (auth.role() = 'authenticated');
 create policy "chat readable by authenticated users" on chat_messages for select using (auth.role() = 'authenticated');
 
--- Players send chat as themselves; the server (service role) inserts on
--- their behalf after checking they're seated in the room.
-create policy "users send their own chat messages" on chat_messages
-  for insert with check (auth.uid() = user_id);
+-- game_state is DELIBERATELY NOT directly readable by clients: its `deck`
+-- column holds every undealt card (including the upcoming turn/river) in
+-- order, so exposing the row would let a player query it via REST/Realtime
+-- and know future community cards in advance. The client only ever sees the
+-- safe subset of game_state through GET /api/rooms/:roomId/state, which runs
+-- under the service-role key and strips `deck` before returning. Because of
+-- this, game_state changes propagate to clients via the ~2.5s poll (and the
+-- hand_players/actions Realtime events that accompany every betting action)
+-- rather than a direct game_state Realtime subscription.
+
+-- Chat messages are inserted ONLY by the server (service role) via
+-- /api/rooms/chat, which verifies the caller is seated in the room, stamps
+-- the real seated display_name, and enforces the length limit. No direct
+-- client insert policy is granted: one would let a client post to any room
+-- without a seat, spoof another player's display_name, bypass the length
+-- cap, and spam unbounded messages straight at the REST API.
 
 -- Hole cards are private: only the owning user can read their own row.
 -- The server bypasses this with the service-role key to deal cards and to
@@ -232,7 +253,10 @@ create index if not exists chat_messages_room_id_idx on chat_messages (room_id);
 -- tables above exist; safe to re-run (will error harmlessly if already added,
 -- in which case just ignore that specific error).
 -- ============================================================================
-alter publication supabase_realtime add table game_state;
+-- NOTE: game_state is intentionally NOT broadcast over Realtime - it carries
+-- the secret `deck` column, and Realtime would send the whole row to every
+-- subscriber. Clients pick up game_state changes via the poll plus the
+-- hand_players/actions events below (which accompany every betting action).
 alter publication supabase_realtime add table hand_players;
 alter publication supabase_realtime add table actions;
 alter publication supabase_realtime add table chat_messages;
@@ -293,3 +317,31 @@ drop policy if exists "users manage their own seat" on players;
 drop policy if exists "authenticated users can create rooms" on rooms;
 create policy "authenticated users can create rooms" on rooms
   for insert with check (auth.role() = 'authenticated' and auth.uid() = created_by);
+
+-- ============================================================================
+-- SECURITY FIX v2 - run this against any existing database. It closes three
+-- holes that direct REST/Realtime access to the tables would otherwise allow:
+--
+--   1. game_state.deck leak (HIGH): game_state was readable by any signed-in
+--      user, exposing the undealt deck (future turn/river cards). Dropping the
+--      select policy makes game_state reachable only via the service-role API
+--      route, which strips `deck`. (Clients fall back to the existing poll +
+--      hand_players/actions Realtime, so live updates still work.)
+--   2. chat_messages spoofing/spam (MEDIUM): the direct-insert policy let a
+--      client post to any room without a seat, spoof another player's name,
+--      and bypass the server's length cap. All legitimate inserts go through
+--      /api/rooms/chat (service role), so the policy is removed.
+--   3. room-code enumeration (MEDIUM): rooms were readable by every signed-in
+--      user, leaking all join codes. Restricted to users seated in the room;
+--      join-by-code still works via the service-role join route.
+-- ============================================================================
+drop policy if exists "game_state readable by authenticated users" on game_state;
+drop policy if exists "users send their own chat messages" on chat_messages;
+drop policy if exists "rooms readable by authenticated users" on rooms;
+create policy "rooms readable by seated members" on rooms for select using (
+  exists (select 1 from players p where p.room_id = rooms.id and p.user_id = auth.uid())
+);
+-- game_state is no longer in the client Realtime path; drop it from the
+-- publication so no row (deck included) is ever broadcast to subscribers.
+-- Safe to ignore an error here if it was never added.
+alter publication supabase_realtime drop table game_state;
